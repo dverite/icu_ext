@@ -1,0 +1,42 @@
+{
+    "name": "icu_ext",
+    "abstract": "Extension to expose functionality from the ICU (Unicode) library",
+    "version": "1.0.0",
+    "release_status": "testing",
+    "maintainer": "Daniel Vérité <daniel@manitou-mail.org>",
+    "license": "postgresql",
+
+    "prereqs": {
+        "runtime": {
+            "requires": {
+                "PostgreSQL": "10.0"
+            }
+        }
+    },
+    "provides": {
+        "icu_ext": {
+            "file": "sql/icu_ext--1.0.sql",
+            "version": "1.0.0",
+            "abstract": "Extension to expose functionality from the ICU (Unicode) library"
+        }
+    },
+    "resources": {
+        "bugtracker": {
+            "web": "https://github.com/dverite/icu_ext/issues"
+        },
+        "repository": {
+            "url": "git://github.com/dverite/icu_ext.git" ,
+            "web": "https://github.com/dverite/icu_ext",
+            "type": "git"
+        }
+    },    
+    "meta-spec": {
+      "version": "1.0.0",
+      "url": "http://pgxn.org/meta/spec.txt"
+    },
+    "tags": [
+	"icu",
+	"unicode",
+        "collation"
+    ]
+}
