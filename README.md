@@ -5,6 +5,10 @@ An extension to expose functionality from [ICU](http://icu-project.org) to Postg
 It requires PostgreSQL version 10 or newer, configured with ICU
 (--with-icu).
 
+Note: this text is in GitHub Flavored Markdown format. Please see the version
+[on github](https://github.com/dverite/icu_ext/blob/master/README.md)
+if it's rendered weirdly elsewhere.
+
 ## Installation
 The Makefile uses the [PGXS infrastructure](https://www.postgresql.org/docs/current/static/extend-pgxs.html) to find include and library files and determine the install location.  
 Build and install with:
@@ -63,7 +67,7 @@ Examples:
       zh_Hans_MO | Macau SAR China
       zh_Hans_SG | Singapore
 
-This list is obtained independantly from the collations declared to
+This list is obtained independently from the collations declared to
 PostgreSQL (found in `pg_collation`).
 
 <a id="icu_collation_attributes"></a>
@@ -150,7 +154,7 @@ Returns the binary sort key (type: `bytea`) corresponding to the
 string with the given collation.
 See http://userguide.icu-project.org/collation/architecture#TOC-Sort-Keys
 
-`collator` is an ICU BCP-47 tag that is independant from the collations
+`collator` is an ICU BCP-47 tag that is independent from the collations
 instantiated in PostgreSQL.
 
 Binary sort keys may be useful to circumvent the core PostgreSQL
@@ -193,7 +197,7 @@ Return the result as a signed integer, similarly to strcoll(),
 that is, the result is negative if string1 < string2,
 zero if string = string2, and positive if string1 > string2.
 
-`collator` is an ICU BCP-47 tag that is independant from the collations
+`collator` is an ICU BCP-47 tag that is independent from the collations
 instantiated in PostgreSQL.
 
 Example: case-sensitive, accent-insensitive comparison:
