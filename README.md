@@ -19,12 +19,14 @@ Build and install with:
 ## Functions
 
 ### Quick links (in alphabetical order)
+[icu_char_name](#icu_char_name)
 [icu_character_boundaries](#icu_character_boundaries)  
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
 [icu_default_locale](#icu_default_locale)  
 [icu_line_boundaries](#icu_line_boundaries)  
 [icu_locales_list](#icu_locales_list)  
+[icu_number_spellout](#icu_number_spellout)
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
 [icu_set_default_locale](#icu_set_default_locale)  
 [icu_sort_key](#icu_sort_key)  
@@ -407,6 +409,46 @@ Example:
 Note: "Mr." followed by a space is recognized by virtue of the locale
 as an abbreviation of the english "Mister", rather than the end of a
 sentence.
+
+<a id="icu_number_spellout"></a>
+### icu_number_spellout (`number` double precision, `locale` text)
+
+Return the spelled out text corresponding to the number expressed in the given locale.
+
+Example:
+
+    =# SELECT loc, icu_number_spellout(1234, loc)
+        FROM (values ('en'),('fr'),('de'),('ru'),('ja')) AS s(loc);
+
+      loc |            icu_number_spellout
+     -----+-------------------------------------------
+      en  | one thousand two hundred thirty-four
+      fr  | mille deux cent trente-quatre
+      de  | ein­tausend­zwei­hundert­vier­und­dreißig
+      ru  | одна тысяча двести тридцать четыре
+      ja  | 千二百三十四
+
+(Note: the german output uses U+00AD (SOFT HYPHEN) to separate words)
+
+### icu_char_name(`c` character)
+
+Return the Unicode character name corresponding to the first codepoint of the input.
+
+Example:
+
+    =# SELECT c, to_hex(ascii(c)), icu_char_name(c)
+       FROM regexp_split_to_table('El Niño', '') as c;
+
+      c | to_hex |          icu_char_name
+     ---+--------+---------------------------------
+      E | 45     | LATIN CAPITAL LETTER E
+      l | 6c     | LATIN SMALL LETTER L
+        | 20     | SPACE
+      N | 4e     | LATIN CAPITAL LETTER N
+      i | 69     | LATIN SMALL LETTER I
+      ñ | f1     | LATIN SMALL LETTER N WITH TILDE
+      o | 6f     | LATIN SMALL LETTER O
+
 
 ## License
 

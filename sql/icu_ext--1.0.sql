@@ -125,3 +125,22 @@ LANGUAGE C STRICT IMMUTABLE;
 COMMENT ON FUNCTION icu_sort_key(text,text)
  IS 'Compute the binary sort key for the string given the collation';
 
+
+CREATE FUNCTION icu_char_name(
+ c character
+) RETURNS text
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE;
+
+COMMENT ON FUNCTION icu_char_name(character)
+ IS 'Return the Unicode character name corresponding to the first codepoint of the input';
+
+CREATE FUNCTION icu_number_spellout(
+ num float8,
+ locale text
+) RETURNS text
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE;
+
+COMMENT ON FUNCTION icu_number_spellout(float8,text)
+ IS 'Spell out the number according to the given locale';

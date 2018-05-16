@@ -6,7 +6,7 @@ PG_CONFIG = pg_config
 DATA = $(wildcard sql/*.sql)
 
 MODULE_big = icu_ext
-OBJS      = icu_ext.o icu_break.o
+OBJS      = icu_ext.o icu_break.o icu_num.o
 
 all:
 

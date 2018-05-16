@@ -21,6 +21,7 @@
 #include "unicode/uloc.h"
 #include "unicode/umachine.h"
 #include "unicode/ustring.h"
+#include "unicode/utext.h"
 #include "unicode/uvernum.h"
 
 PG_MODULE_MAGIC;
@@ -32,6 +33,7 @@ PG_FUNCTION_INFO_V1(icu_default_locale);
 PG_FUNCTION_INFO_V1(icu_set_default_locale);
 PG_FUNCTION_INFO_V1(icu_compare);
 PG_FUNCTION_INFO_V1(icu_sort_key);
+PG_FUNCTION_INFO_V1(icu_char_name);
 
 
 Datum
@@ -527,4 +529,61 @@ icu_sort_key(PG_FUNCTION_ARGS)
 
 	SET_VARSIZE(output, o_len + VARHDRSZ - 1);  /* -1 excludes the ending NUL byte */
 	PG_RETURN_BYTEA_P(output);
+}
+
+/* Return the first UChar32 of the char(1) string */
+static UChar32
+first_char32(BpChar* source)
+{
+	UChar32 c;
+	UText *ut;
+	int32_t ulen;
+	UChar *ustring;
+	UErrorCode status = U_ZERO_ERROR;
+
+	ulen = icu_to_uchar(&ustring, VARDATA_ANY(source), VARSIZE_ANY_EXHDR(source));
+
+	ut = utext_openUChars(NULL, ustring, ulen, &status);
+	if (U_FAILURE(status))
+		elog(ERROR, "utext_openUChars() failed: %s", u_errorName(status));
+	c = utext_current32(ut);
+	utext_close(ut);
+	return c;
+}
+
+Datum
+icu_char_name(PG_FUNCTION_ARGS)
+{
+	BpChar *source = PG_GETARG_BPCHAR_PP(0);
+	char local_buf[4];
+	char *buffer;
+	int32_t buflen = sizeof(local_buf);
+	UChar32 first_char;
+	int32_t ulen;
+	UErrorCode status = U_ZERO_ERROR;
+
+	first_char = first_char32(source);
+
+	ulen = u_charName(first_char,
+					  U_EXTENDED_CHAR_NAME,
+					  local_buf,
+					  buflen,
+					  &status);
+	if (status == U_BUFFER_OVERFLOW_ERROR)		/* buffer too small */
+	{
+		buffer = palloc((ulen+1)*sizeof(char));
+		status = U_ZERO_ERROR;
+		ulen = u_charName(first_char,
+						  U_EXTENDED_CHAR_NAME,
+						  buffer,
+						  ulen+1,
+						  &status);
+	}
+	else
+		buffer = local_buf;
+
+	if (U_FAILURE(status))
+		elog(ERROR, "u_charName failed: %s", u_errorName(status));
+	else
+		PG_RETURN_TEXT_P(cstring_to_text(buffer));
 }
