@@ -19,14 +19,14 @@ Build and install with:
 ## Functions
 
 ### Quick links (in alphabetical order)
-[icu_char_name](#icu_char_name)
+[icu_char_name](#icu_char_name)  
 [icu_character_boundaries](#icu_character_boundaries)  
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
 [icu_default_locale](#icu_default_locale)  
 [icu_line_boundaries](#icu_line_boundaries)  
 [icu_locales_list](#icu_locales_list)  
-[icu_number_spellout](#icu_number_spellout)
+[icu_number_spellout](#icu_number_spellout)  
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
 [icu_set_default_locale](#icu_set_default_locale)  
 [icu_sort_key](#icu_sort_key)  
@@ -428,7 +428,9 @@ Example:
       ru  | одна тысяча двести тридцать четыре
       ja  | 千二百三十四
 
-(Note: the german output uses U+00AD (SOFT HYPHEN) to separate words)
+(Note: the german output uses U+00AD (SOFT HYPHEN) to separate words. Github's
+markdown to HTML conversion seems to remove them, so in the above text the spellout
+might appear like a single long word.)
 
 ### icu_char_name(`c` character)
 
