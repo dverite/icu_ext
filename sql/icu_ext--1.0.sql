@@ -8,6 +8,13 @@ LANGUAGE C;
 COMMENT ON FUNCTION icu_version()
  IS 'Version of the ICU library in use';
 
+CREATE FUNCTION icu_unicode_version() RETURNS text
+AS 'MODULE_PATHNAME'
+LANGUAGE C;
+
+COMMENT ON FUNCTION icu_version()
+ IS 'Version of the Unicode standard used by ICU';
+
 CREATE FUNCTION icu_collation_attributes(
  IN collator text,
  IN exclude_defaults bool default false,

@@ -27,6 +27,7 @@
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(icu_version);
+PG_FUNCTION_INFO_V1(icu_unicode_version);
 PG_FUNCTION_INFO_V1(icu_collation_attributes);
 PG_FUNCTION_INFO_V1(icu_locales_list);
 PG_FUNCTION_INFO_V1(icu_default_locale);
@@ -39,11 +40,22 @@ PG_FUNCTION_INFO_V1(icu_char_name);
 Datum
 icu_version(PG_FUNCTION_ARGS)
 {
-/* TODO: add u_getUnicodeVersion() */
 	UVersionInfo version;
 	char buf[U_MAX_VERSION_STRING_LENGTH+1];
 
 	u_getVersion(version);
+	u_versionToString(version, buf);
+
+	PG_RETURN_TEXT_P(cstring_to_text(buf));
+}
+
+Datum
+icu_unicode_version(PG_FUNCTION_ARGS)
+{
+	UVersionInfo version;
+	char buf[U_MAX_VERSION_STRING_LENGTH+1];
+
+	u_getUnicodeVersion(version);
 	u_versionToString(version, buf);
 
 	PG_RETURN_TEXT_P(cstring_to_text(buf));
