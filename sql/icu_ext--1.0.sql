@@ -151,3 +151,22 @@ LANGUAGE C STRICT STABLE;
 
 COMMENT ON FUNCTION icu_number_spellout(float8,text)
  IS 'Spell out the number according to the given locale';
+
+CREATE FUNCTION icu_spoof_check(
+  str text
+) RETURNS boolean
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+COMMENT ON FUNCTION icu_spoof_check(text)
+ IS 'Check whether the argument is likely to be an attempt at confusing a reader';
+
+CREATE FUNCTION icu_confusable_strings_check(
+  str1 text,
+  str2 text
+) RETURNS boolean
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+COMMENT ON FUNCTION icu_confusable_strings_check(text,text)
+IS 'Check whether the arguments are visually confusable with each other';

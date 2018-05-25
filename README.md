@@ -23,6 +23,7 @@ Build and install with:
 [icu_character_boundaries](#icu_character_boundaries)  
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
+[icu_confusable_strings_check](#icu_confusable_strings_check)  
 [icu_default_locale](#icu_default_locale)  
 [icu_line_boundaries](#icu_line_boundaries)  
 [icu_locales_list](#icu_locales_list)  
@@ -30,6 +31,7 @@ Build and install with:
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
 [icu_set_default_locale](#icu_set_default_locale)  
 [icu_sort_key](#icu_sort_key)  
+[icu_spoof_check](#icu_spoof_check)  
 [icu_unicode_version](#icu_unicode_version)  
 [icu_version](#icu_version)  
 [icu_word_boundaries](#icu_word_boundaries)  
@@ -460,6 +462,48 @@ Example:
       ñ | f1     | LATIN SMALL LETTER N WITH TILDE
       o | 6f     | LATIN SMALL LETTER O
 
+
+<a id="icu_spoof_check"></a>
+### icu_spoof_check (`string` text)
+
+Return a boolean indicating whether the argument is likely to be an
+attempt at confusing a reader.  The implementation is based on Unicode
+Technical Reports [#36](http://unicode.org/reports/tr36) and
+[#39](http://unicode.org/reports/tr39) and uses the ICU default
+settings for spoof checks.
+
+Example:
+
+    =# SELECT txt, icu_spoof_check(txt) FROM (VALUES ('paypal'), (E'p\u0430ypal')) AS s(txt);
+      txt   | icu_spoof_check
+    --------+-----------------
+     paypal | f
+     pаypal | t
+
+(Note: The second character in the second row is U+0430 (CYRILLIC
+SMALL LETTER A) instead of the genuine ASCII U+0061 (LATIN SMALL LETTER A))
+
+
+<a id="icu_confusable_strings_check"></a>
+### icu_confusable_strings_check(`string1` text, `string2` text)
+
+Return a boolean indicating whether the string arguments are visually
+confusable with each other, according to data described in [Unicode
+Technical Report #39](http://unicode.org/reports/tr39/#Confusable_Detection).
+The settings and comparison levels are ICU defaults. For strictly
+identical strings, it returns true.
+
+Example:
+
+    =# SELECT txt, icu_confusable_strings_check('phil', txt) AS confusable
+        FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l')) AS s(txt);
+
+     txt  | confusable
+    ------+------------
+     phiL | f
+     phiI | t
+     phi1 | t
+     phıl | t
 
 ## License
 
