@@ -30,6 +30,7 @@ Build and install with:
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
 [icu_set_default_locale](#icu_set_default_locale)  
 [icu_sort_key](#icu_sort_key)  
+[icu_unicode_version](#icu_unicode_version)  
 [icu_version](#icu_version)  
 [icu_word_boundaries](#icu_word_boundaries)  
 
@@ -39,6 +40,14 @@ These functions work in both Unicode and non-Unicode databases.
 ### icu_version()
 
   Returns the version of the ICU library linked with the server.
+
+
+<a id="icu_unicode_version"></a>
+### icu_unicode_version()
+
+  Returns the version of the Unicode standard used by the ICU library
+  linked with the server.
+
 
 <a id="icu_locales_list"></a>
 ### icu_locales_list()
