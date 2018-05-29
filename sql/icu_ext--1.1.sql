@@ -1,12 +1,7 @@
 /* icu_ext.sql */
 
-
-CREATE FUNCTION icu_version() RETURNS text
-AS 'MODULE_PATHNAME'
-LANGUAGE C;
-
-COMMENT ON FUNCTION icu_version()
- IS 'Version of the ICU library in use';
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+\echo Use "CREATE EXTENSION icu_ext" to load this file. \quit
 
 CREATE FUNCTION icu_unicode_version() RETURNS text
 AS 'MODULE_PATHNAME'
