@@ -3,11 +3,18 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION icu_ext" to load this file. \quit
 
-CREATE FUNCTION icu_unicode_version() RETURNS text
+CREATE FUNCTION icu_version() RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C;
 
 COMMENT ON FUNCTION icu_version()
+ IS 'Version of the ICU library currently in use';
+
+CREATE FUNCTION icu_unicode_version() RETURNS text
+AS 'MODULE_PATHNAME'
+LANGUAGE C;
+
+COMMENT ON FUNCTION icu_unicode_version()
  IS 'Version of the Unicode standard used by ICU';
 
 CREATE FUNCTION icu_collation_attributes(
