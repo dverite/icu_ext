@@ -130,6 +130,39 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 
 	memset(nulls, 0, sizeof(nulls));
 
+	/* name (not a real attribute, added for convenience) */
+	if (include_defaults)
+	{
+		UChar dname_local[100];
+		UChar *dname = dname_local;
+		char *buf;
+		int32_t ulen;
+
+		ulen = uloc_getDisplayName(locale,
+								   NULL,
+								   dname,
+								   sizeof(dname_local)-1,
+								   &status);
+		if (status == U_BUFFER_OVERFLOW_ERROR)
+		{
+			dname = palloc((ulen+1)*sizeof(UChar));
+			status = U_ZERO_ERROR;
+			ulen = uloc_getDisplayName(locale,
+									   NULL,
+									   dname,
+									   ulen,
+									   &status);
+		}
+		if (U_FAILURE(status))
+			elog(ERROR, "uloc_getDisplayName failed: %s", u_errorName(status));
+
+		icu_from_uchar(&buf, dname, ulen);
+
+		values[0] = CStringGetTextDatum("displayname");
+		values[1] = CStringGetTextDatum(buf);
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+	}
+
 	/* UCOL_NUMERIC_COLLATION (key:kn) */
 	u_attr_val = get_attribute(collator, UCOL_NUMERIC_COLLATION);
 	if (include_defaults || u_attr_val != UCOL_OFF)
