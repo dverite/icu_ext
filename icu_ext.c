@@ -621,11 +621,14 @@ first_char32(BpChar* source)
 	return c;
 }
 
+/*
+ * Return the Unicode name corresponding to the the input character.
+ */
 Datum
 icu_char_name(PG_FUNCTION_ARGS)
 {
 	BpChar *source = PG_GETARG_BPCHAR_PP(0);
-	char local_buf[4];
+	char local_buf[80];
 	char *buffer;
 	int32_t buflen = sizeof(local_buf);
 	UChar32 first_char;
