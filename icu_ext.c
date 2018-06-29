@@ -33,6 +33,7 @@ PG_FUNCTION_INFO_V1(icu_locales_list);
 PG_FUNCTION_INFO_V1(icu_default_locale);
 PG_FUNCTION_INFO_V1(icu_set_default_locale);
 PG_FUNCTION_INFO_V1(icu_compare);
+PG_FUNCTION_INFO_V1(icu_case_compare);
 PG_FUNCTION_INFO_V1(icu_sort_key);
 PG_FUNCTION_INFO_V1(icu_char_name);
 
@@ -491,6 +492,30 @@ icu_compare(PG_FUNCTION_ARGS)
 	ucol_close(collator);
 	PG_RETURN_INT32(result == UCOL_EQUAL ? 0 :
 					(result == UCOL_GREATER ? 1 : -1));
+}
+
+/*
+ * Compare two strings with full case folding.
+ */
+Datum
+icu_case_compare(PG_FUNCTION_ARGS)
+{
+	text *txt1 = PG_GETARG_TEXT_PP(0);
+	int32_t len1 = VARSIZE_ANY_EXHDR(txt1);
+	text *txt2 = PG_GETARG_TEXT_PP(1);
+	int32_t len2 = VARSIZE_ANY_EXHDR(txt2);
+	int32_t result;
+	UChar *uchar1, *uchar2;
+
+	(void)icu_to_uchar(&uchar1, text_to_cstring(txt1), len1);
+	(void)icu_to_uchar(&uchar2, text_to_cstring(txt2), len2);
+
+	result = u_strcasecmp(uchar1, uchar2, 0);
+
+	pfree(uchar1);
+	pfree(uchar2);
+
+	PG_RETURN_INT32(result);
 }
 
 /*

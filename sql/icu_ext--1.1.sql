@@ -122,7 +122,17 @@ AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT IMMUTABLE;
 
 COMMENT ON FUNCTION icu_compare(text,text,text)
- IS 'Compare two string with the given collation and return an signed int like strcoll';
+ IS 'Compare two strings with the given collation and return a signed int like strcoll';
+
+CREATE FUNCTION icu_case_compare(
+ str1 text,
+ str2 text
+) RETURNS int
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT IMMUTABLE;
+
+COMMENT ON FUNCTION icu_case_compare(text,text)
+ IS 'Compare two strings case-insensitively using full case folding';
 
 CREATE FUNCTION icu_sort_key(
  str text,
