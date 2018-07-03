@@ -86,9 +86,10 @@ PostgreSQL (found in `pg_collation`).
 <a id="icu_collation_attributes"></a>
 ### icu_collation_attributes(`collator` text [, `exclude_defaults` bool])
 
-Lists the attributes and version of an ICU collation, returned as a set
-of `(attribute,value)` tuples.  The `collator` argument must designate
-an [ICU collator](http://userguide.icu-project.org/collation/api) and accepts
+Lists the attributes, version and display name of an ICU collation,
+returned as a set of `(attribute,value)` tuples.  The `collator`
+argument must designate an
+[ICU collator](http://userguide.icu-project.org/collation/api) and accepts
 several different syntaxes. In particular, 
 a [locale ID](http://userguide.icu-project.org/locale) or (if ICU>=54) a
 [language tag](http://www.unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
@@ -105,16 +106,17 @@ to the `lc_collate` argument of CREATE COLLATION).
           JOIN LATERAL icu_collation_attributes(collcollate) a
           ON (collname='fr-CA-x-icu');
 
-      attribute |   value   
-     -----------+-----------
-      kn        | false
-      kb        | true
-      kk        | false
-      ka        | noignore
-      ks        | level3
-      kf        | false
-      kc        | false
-      version   | 153.64.29
+       attribute  |       value
+     -------------+-------------------
+      displayname | français (Canada)
+      kn          | false
+      kb          | true
+      kk          | false
+      ka          | noignore
+      ks          | level3
+      kf          | false
+      kc          | false
+      version     | 153.80.33
 
 
 `icu_collation_attributes()` is useful to check that the settings embedded into a
