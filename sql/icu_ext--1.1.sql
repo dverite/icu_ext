@@ -182,3 +182,14 @@ LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 COMMENT ON FUNCTION icu_confusable_strings_check(text,text)
 IS 'Check whether the arguments are visually confusable with each other';
+
+
+CREATE FUNCTION icu_transforms_list(
+)
+RETURNS SETOF text
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;
+
+CREATE FUNCTION icu_transform(string text, trans text) RETURNS text
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT;

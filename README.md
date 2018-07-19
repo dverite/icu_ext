@@ -32,6 +32,8 @@ Build and install with:
 [icu_set_default_locale](#icu_set_default_locale)  
 [icu_sort_key](#icu_sort_key)  
 [icu_spoof_check](#icu_spoof_check)  
+[icu_transform](#icu_transform)  
+[icu_transforms_list](#icu_transforms_list)  
 [icu_unicode_version](#icu_unicode_version)  
 [icu_version](#icu_version)  
 [icu_word_boundaries](#icu_word_boundaries)  
@@ -506,6 +508,68 @@ Example:
      phiI | t
      phi1 | t
      phıl | t
+
+<a id="icu_transform"></a>
+### icu_transform (`string` text, `transformations` text)
+
+Return a string with some transformations applied. This function essentially calls
+ICU's [utrans_transUChars()](http://icu-project.org/apiref/icu4c/utrans_8h.html#af415d8aa51e79d4494ebb8ef8fc76ae2).
+
+The first argument is the string to transform, and the second is the transformation
+to apply, expressed as a sequence of transforms and filters
+(see the [ICU user guide on transforms](http://userguide.icu-project.org/transforms/general)
+and the output of `icu_transforms_list()` mentioned below).
+
+Examples:
+
+Transliterate:
+
+    =# select icu_transform('Владимир Путин', 'Cyrl-Latn'); -- just 'Latin' would work here too
+     icu_transform
+    ----------------
+     Vladimir Putin
+
+Transform Unicode names into the corresponding characters:
+
+    =# select icu_transform('10\N{SUPERSCRIPT MINUS}\N{SUPERSCRIPT FOUR}'
+			   '\N{MICRO SIGN}m = 1 \N{ANGSTROM SIGN}',
+			 'Name-Any');
+     icu_transform
+    ---------------
+     10⁻⁴µm = 1 Å
+
+Remove diacritics (generalized "unaccent") through Unicode decomposition.
+
+     =# select icu_transform('1 Å', 'any-NFD; [:nonspacing mark:] any-remove; any-NFC');
+
+     icu_transform
+    ---------------
+     1 A
+
+Generate hexadecimal codepoints for non-ASCII characters:
+
+    =# select icu_transform('Ich muß essen.', '[:^ascii:]; Hex');
+        icu_transform
+    ---------------------
+     Ich mu\u00DF essen.
+
+
+<a id="icu_transforms_list"></a>
+### icu_transforms_list ()
+
+Return the list of built-in transliterations or transforms, as a set of text,
+corresponding to "Basic IDs" in [ICU documentation](http://userguide.icu-project.org/transforms/general).
+The initial set of transforms are transliterations between scripts
+(like `Katakana-Latin` or `Latin-Cyrillic`), but they're
+supplemented with functionalities related to accents, casing,
+Unicode composition and decomposition with combining characters
+and other conversions.
+
+Values from this list are meant to be used individually as the 2nd argument of
+`icu_transform()`, or assembled with semi-colon separators to form
+compound transforms, possibly with filters added to limit the set of characters
+to transform.
+
 
 ## License
 
