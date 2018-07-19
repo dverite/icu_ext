@@ -190,6 +190,12 @@ RETURNS SETOF text
 AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT;
 
+COMMENT ON FUNCTION icu_transforms_list()
+IS 'List the basic transforms available to icu_transform';
+
 CREATE FUNCTION icu_transform(string text, trans text) RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C STRICT;
+
+COMMENT ON FUNCTION icu_transform(text,text)
+IS 'Apply a transformation through basic or compound transliterators and filters';
