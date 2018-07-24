@@ -8,13 +8,15 @@
  */
 
 #include "postgres.h"
+
+#include "catalog/pg_collation.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "miscadmin.h"
+#include "mb/pg_wchar.h"
 #include "utils/builtins.h"
 #include "utils/tuplestore.h"
 #include "utils/pg_locale.h"
-#include "miscadmin.h"
-#include "mb/pg_wchar.h"
 
 #include "unicode/ucnv.h"
 #include "unicode/ucol.h"
@@ -33,8 +35,10 @@ PG_FUNCTION_INFO_V1(icu_locales_list);
 PG_FUNCTION_INFO_V1(icu_default_locale);
 PG_FUNCTION_INFO_V1(icu_set_default_locale);
 PG_FUNCTION_INFO_V1(icu_compare);
+PG_FUNCTION_INFO_V1(icu_compare_coll);
 PG_FUNCTION_INFO_V1(icu_case_compare);
 PG_FUNCTION_INFO_V1(icu_sort_key);
+PG_FUNCTION_INFO_V1(icu_sort_key_coll);
 PG_FUNCTION_INFO_V1(icu_char_name);
 
 
@@ -474,35 +478,64 @@ icu_set_default_locale(PG_FUNCTION_ARGS)
 		PG_RETURN_TEXT_P(cstring_to_text(buf));
 }
 
+/*
+ * Get the UCollator object corresponding to the collation in input.
+ * This UCollator is kept open by the backend and pointed to by the
+ * cached pg_locale_t object.
+ */
+static UCollator*
+ucollator_from_coll_id(Oid collid)
+{
+	pg_locale_t pg_locale;
+
+	if (collid == DEFAULT_COLLATION_OID || !OidIsValid(collid))
+	{
+		/*
+		 * If it was possible to have an ICU collation as default, we should
+		 * not error out here on collid==DEFAULT_COLLATION_OID
+		 * For the moment postgres doesn't support it, so it's okay.
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_INDETERMINATE_COLLATION),
+				 errmsg("could not determine which collation to use"),
+				 errhint("Use the COLLATE clause to set the collation explicitly.")));
+	}
+
+	pg_locale = pg_newlocale_from_collation(collid);
+
+	if (!pg_locale || pg_locale->provider != 'i')
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_COLLATION_MISMATCH),
+				 errmsg("the collation provider of the input string must be ICU")));
+	}
+	return pg_locale->info.icu.ucol;
+}
 
 /*
- * Compare two strings with the given collation.
- * Return the result as a signed integer, similarly to strcoll().
+ * The actual collation-aware comparison happens here.
+ * the UCollator comes either from a cached pg_locale_t
+ * or is just opened and closed immediately by icu_ext.
  */
-Datum
-icu_compare(PG_FUNCTION_ARGS)
+static UCollationResult
+our_strcoll(text *txt1, text *txt2, UCollator *collator )
 {
-	text *txt1 = PG_GETARG_TEXT_PP(0);
-	int32_t len1 = VARSIZE_ANY_EXHDR(txt1);
-	text *txt2 = PG_GETARG_TEXT_PP(1);
-	int32_t len2 = VARSIZE_ANY_EXHDR(txt2);
-	const char *locname = text_to_cstring(PG_GETARG_TEXT_P(2));
-	UCollator	*collator = NULL;
-	UErrorCode	status = U_ZERO_ERROR;
 	UCollationResult result;
+	int32_t len1 = VARSIZE_ANY_EXHDR(txt1);
+	int32_t len2 = VARSIZE_ANY_EXHDR(txt2);
 
-	collator = ucol_open(locname, &status);
-	if (!collator || U_FAILURE(status)) {
-		elog(ERROR, "failed to open collation");
-	}
 
 	if (GetDatabaseEncoding() == PG_UTF8)
 	{
 		/* use the UTF-8 representation directly if possible */
+		UErrorCode	status = U_ZERO_ERROR;
+
 		result = ucol_strcollUTF8(collator,
 								  text_to_cstring(txt1), len1,
 								  text_to_cstring(txt2), len2,
 								  &status);
+		if (U_FAILURE(status))
+			elog(ERROR, "ICU strcoll failed: %s", u_errorName(status));
 	}
 	else
 	{
@@ -519,13 +552,54 @@ icu_compare(PG_FUNCTION_ARGS)
 		pfree(uchar1);
 		pfree(uchar2);
 	}
-	if (U_FAILURE(status))
-		elog(ERROR, "ICU strcoll failed: %s", u_errorName(status));
+	return result;
+}
 
+/*
+ * Compare two strings with the given collation.
+ * Return the result as a signed integer, similarly to strcoll().
+ */
+Datum
+icu_compare_coll(PG_FUNCTION_ARGS)
+{
+	text *txt1 = PG_GETARG_TEXT_PP(0);
+	text *txt2 = PG_GETARG_TEXT_PP(1);	
+	const char *collname = text_to_cstring(PG_GETARG_TEXT_P(2));
+	UCollator	*collator = NULL;
+	UErrorCode	status = U_ZERO_ERROR;
+	UCollationResult result;
+
+	collator = ucol_open(collname, &status);
+	if (!collator || U_FAILURE(status)) {
+		elog(ERROR, "failed to open collation: %s", u_errorName(status));
+	}
+
+	result = our_strcoll(txt1, txt2, collator);
 	ucol_close(collator);
+
 	PG_RETURN_INT32(result == UCOL_EQUAL ? 0 :
 					(result == UCOL_GREATER ? 1 : -1));
 }
+
+/*
+ * Compare two strings with the collation of the function,
+ * which must be an ICU collation.
+ * Return the result as a signed integer, similarly to strcoll().
+ */
+Datum
+icu_compare(PG_FUNCTION_ARGS)
+{
+	text *txt1 = PG_GETARG_TEXT_PP(0);
+	text *txt2 = PG_GETARG_TEXT_PP(1);	
+	UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
+	UCollationResult result;
+
+	result = our_strcoll(txt1, txt2, collator);
+
+	PG_RETURN_INT32(result == UCOL_EQUAL ? 0 :
+					(result == UCOL_GREATER ? 1 : -1));
+}
+
 
 /*
  * Compare two strings with full case folding.
@@ -553,10 +627,52 @@ icu_case_compare(PG_FUNCTION_ARGS)
 
 /*
  * Return a binary sort key corresponding to the string and
- * the given collation.
+ * its collation (through a COLLATE clause).
  */
 Datum
 icu_sort_key(PG_FUNCTION_ARGS)
+{
+	text *txt = PG_GETARG_TEXT_PP(0);
+    UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
+	int32_t o_len = 1024;		/* first attempt */
+	int32_t ulen;
+	UChar *ustring;
+	bytea *output;
+
+
+	ulen = icu_to_uchar(&ustring, VARDATA_ANY(txt), VARSIZE_ANY_EXHDR(txt));
+
+	do
+	{
+		int32_t effective_len;
+		output = (bytea*) palloc(o_len + VARHDRSZ);
+		effective_len = ucol_getSortKey(collator,
+										ustring,
+										ulen,
+										(uint8_t*)VARDATA(output),
+										o_len);
+		if (effective_len == 0)
+		{
+			elog(ERROR, "ucol_getSortKey() failed: internal error");
+		}
+		if (effective_len > o_len)
+		{
+			pfree(output);
+			output = NULL;
+		}
+		o_len = effective_len;
+	} while (output == NULL);	/* should loop at most once, if buffer too small */
+
+	SET_VARSIZE(output, o_len + VARHDRSZ - 1);  /* -1 excludes the ending NUL byte */
+	PG_RETURN_BYTEA_P(output);
+}
+
+/*
+ * Return a binary sort key corresponding to the string and
+ * the given collation.
+ */
+Datum
+icu_sort_key_coll(PG_FUNCTION_ARGS)
 {
 	text *txt = PG_GETARG_TEXT_PP(0);
 	const char *locname = text_to_cstring(PG_GETARG_TEXT_P(1));
@@ -593,7 +709,7 @@ icu_sort_key(PG_FUNCTION_ARGS)
 			output = NULL;
 		}
 		o_len = effective_len;
-	} while (output == NULL);	/* should loop at most one time */
+	} while (output == NULL);	/* should loop at most once, if buffer too small */
 
 	ucol_close(collator);
 

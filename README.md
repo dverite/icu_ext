@@ -165,14 +165,26 @@ Example of checking a collation without any reference to `pg_collation`:
 a collator with the given argument.
 
 <a id="icu_sort_key"></a>
-### icu_sort_key(`string` text, `collator` text)
+### icu_sort_key(`string` text [, `collator` text])
 
 Returns the binary sort key (type: `bytea`) corresponding to the
 string with the given collation.
 See http://userguide.icu-project.org/collation/architecture#TOC-Sort-Keys
 
-`collator` is an ICU BCP-47 tag that is independent from the collations
-instantiated in PostgreSQL.
+When a `collator` argument is passed, it is interpreted as an ICU
+BCP-47 tag that is independent from the collations instantiated in
+PostgreSQL. In this case, the collation associated to `string`
+(either implicitly or explicitly via a COLLATE clause) is ignored:
+the sort key is generated for `collator`.
+
+When there is no `collator` argument, it is the collation associated
+to `string` that is used to generate the sort key. It must be
+an ICU collation or the function will error out. This form
+with a single argument is faster due to Postgres keeping its
+collations "open" (in the sense of `ucol_open()/ucol_close()`) for the
+duration of the session, whereas the other form with the
+explicit `collator` argument does open and close the ICU collation
+for each call.
 
 Binary sort keys may be useful to circumvent the core PostgreSQL
 limitation that two strings that differ in their byte representation
@@ -182,11 +194,10 @@ You may order or rank by binary sort keys, or materialize them in a unique
 index to achieve at the SQL level what cannot be done internally by
 PostgreSQL for case-insensitive or accent-insensitive collations.
 
-The function is declared IMMUTABLE to be usable in indexes, but be
-aware that it's only true as far as the version of the locale
-associated with the collation doesn't change. (Typically it changes
-between major ICU versions). In short, consider rebuilding
-the affected indexes on ICU upgrades.
+The function is declared IMMUTABLE to be usable in indexes, but please be
+aware that it's only true as far as the "version" of the collation
+doesn't change. (Typically it changes between major ICU versions). In
+short, consider rebuilding the affected indexes on ICU upgrades.
 
 To simply compare pairs of strings, consider `icu_compare()` instead.
 
@@ -207,28 +218,64 @@ Example demonstrating a case-sensitive, accent-sensitive unique index:
     INSERT 0 1
 
 <a id="icu_compare"></a>
-### icu_compare(`string1` text, `string2` text, `collator` text)
+### icu_compare(`string1` text, `string2` text [, `collator` text])
 
 Compare two strings with the given collation.
 Return the result as a signed integer, similarly to strcoll(),
 that is, the result is negative if string1 < string2,
 zero if string = string2, and positive if string1 > string2.
 
-`collator` is an ICU BCP-47 tag that is independent from the collations
-instantiated in PostgreSQL.
+When a `collator` argument is passed, it is interpreted as an ICU
+BCP-47 tag, independently of the collations instantiated in
+PostgreSQL. In this case, the collations associated to `string1`
+and `string2` (either implicitly or explicitly via a COLLATE clause)
+are ignored: the comparison is done with `collator` as the collation.
+
+When there is no `collator` argument, it is the collation associated
+to `string1` and `string2` that is used for the comparison.
+It must be an ICU collation and it must be the same for the two
+arguments or the function will error out. This form
+with a single argument is significantly faster due to Postgres keeping its
+collations "open" (in the sense of `ucol_open()/ucol_close()`) for the
+duration of the session, whereas the other form with the
+explicit `collator` argument does open and close the ICU collation
+for each call.
+
 
 Example: case-sensitive, accent-insensitive comparison:
 
-    =# SELECT icu_compare('abcé','abce','en-u-ks-level1-kc-true');
+    =# SELECT icu_compare('abcé', 'abce', 'en-u-ks-level1-kc-true');
      icu_compare 
     -------------
                0
 
-    =# SELECT icu_compare('Abcé','abce','en-u-ks-level1-kc-true');
+    =# SELECT icu_compare('Abcé', 'abce', 'en-u-ks-level1-kc-true');
      icu_compare 
     -------------
                1
 
+With two arguments and a collation determined by the COLLATE clause:
+
+    =# SELECT icu_compare('Abcé', 'abce' COLLATE "fr-x-icu");
+     icu_compare 
+    -------------
+               1
+
+With an implicit Postgres collation:
+
+    =# CREATE COLLATION mycoll (locale='fr-u-ks-level1', provider='icu');
+    CREATE COLLATION
+
+    =# CREATE TABLE books (id int, title text COLLATE "mycoll");
+    CREATE TABLE
+
+    =# insert into books values(1, $$C'est l'été$$);
+    INSERT 0 1
+
+    =# select id,title from books where icu_compare (title, $$c'est l'ete$$) = 0;
+     id |    title    
+    ----+-------------
+      1 | C'est l'été
 
 
 <a id="icu_set_default_locale"></a>
