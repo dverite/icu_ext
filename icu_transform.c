@@ -74,21 +74,25 @@ icu_transform(PG_FUNCTION_ARGS)
 	UErrorCode status = U_ZERO_ERROR;
 	UTransliterator *utrans;
 	int32_t ulen, limit, capacity, start, original_ulen;
-	int32_t result_len;
+	int32_t result_len, in_ulen;
 	UChar* utext;
+	UChar* trans_id;
 	char* result;
 	UChar* original;
 
 	bool done = false;
 
-	utrans = utrans_open(input_id,
-						 UTRANS_FORWARD,
-						 NULL, /* rules. NULL for system transliterators */
-						 -1,
-						 NULL, /* pointer to parseError. Not used */
-						 &status);
+	in_ulen = icu_to_uchar(&trans_id, input_id, strlen(input_id));
 
-	if (U_FAILURE(status))
+	utrans = utrans_openU(trans_id,
+						  in_ulen,
+						  UTRANS_FORWARD,
+						  NULL, /* rules. NULL for system transliterators */
+						  -1,
+						  NULL, /* pointer to parseError. Not used */
+						  &status);
+
+	if (U_FAILURE(status) || !utrans)
 	{
 		elog(ERROR, "utrans_open failed: %s", u_errorName(status));
 	}
