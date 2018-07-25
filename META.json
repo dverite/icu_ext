@@ -1,8 +1,8 @@
 {
     "name": "icu_ext",
     "abstract": "Extension to expose functionality from the ICU (Unicode) library",
-    "version": "1.2.0",
-    "release_status": "testing",
+    "version": "1.3.0",
+    "release_status": "stable",
     "maintainer": "Daniel Vérité <daniel@manitou-mail.org>",
     "license": "postgresql",
 
@@ -15,8 +15,8 @@
     },
     "provides": {
         "icu_ext": {
-            "file": "sql/icu_ext--1.2.sql",
-            "version": "1.2.0",
+            "file": "sql/icu_ext--1.3.sql",
+            "version": "1.3.0",
             "abstract": "Extension to expose functionality from the ICU (Unicode) library"
         }
     },
