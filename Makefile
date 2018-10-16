@@ -7,6 +7,7 @@ DATA = $(wildcard sql/*.sql)
 
 MODULE_big = icu_ext
 OBJS      = icu_ext.o icu_break.o icu_num.o icu_spoof.o icu_transform.o
+SHLIB_LINK = $(ICU_LIBS)
 
 all:
 
