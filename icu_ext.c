@@ -26,6 +26,8 @@
 #include "unicode/utext.h"
 #include "unicode/uvernum.h"
 
+#include "icu_ext.h"
+
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(icu_version);
@@ -483,7 +485,7 @@ icu_set_default_locale(PG_FUNCTION_ARGS)
  * This UCollator is kept open by the backend and pointed to by the
  * cached pg_locale_t object.
  */
-static UCollator*
+UCollator*
 ucollator_from_coll_id(Oid collid)
 {
 	pg_locale_t pg_locale;
