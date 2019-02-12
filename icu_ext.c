@@ -493,13 +493,12 @@ ucollator_from_coll_id(Oid collid)
 	if (collid == DEFAULT_COLLATION_OID || !OidIsValid(collid))
 	{
 		/*
-		 * If it was possible to have an ICU collation as default, we should
-		 * not error out here on collid==DEFAULT_COLLATION_OID
-		 * For the moment postgres doesn't support it, so it's okay.
+		 * This will need to be changed when a db will be able to have
+		 * an ICU collation by default (not possible as of PG11).
 		 */
 		ereport(ERROR,
 				(errcode(ERRCODE_INDETERMINATE_COLLATION),
-				 errmsg("could not determine which collation to use"),
+				 errmsg("could not determine which ICU collation to use"),
 				 errhint("Use the COLLATE clause to set the collation explicitly.")));
 	}
 
