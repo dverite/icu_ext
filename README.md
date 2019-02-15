@@ -28,10 +28,12 @@ Build and install with:
 [icu_line_boundaries](#icu_line_boundaries)  
 [icu_locales_list](#icu_locales_list)  
 [icu_number_spellout](#icu_number_spellout)  
+[icu_replace](#icu_replace)  
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
 [icu_set_default_locale](#icu_set_default_locale)  
 [icu_sort_key](#icu_sort_key)  
 [icu_spoof_check](#icu_spoof_check)  
+[icu_strpos](#icu_strpos)  
 [icu_transform](#icu_transform)  
 [icu_transforms_list](#icu_transforms_list)  
 [icu_unicode_version](#icu_unicode_version)  
@@ -616,6 +618,56 @@ Values from this list are meant to be used individually as the 2nd argument of
 `icu_transform()`, or assembled with semi-colon separators to form
 compound transforms, possibly with filters added to limit the set of characters
 to transform.
+
+<a id="icu_strpos"></a>
+### icu_strpos(`string` text, `substring` text [, `collator` text])
+
+Like `strpos(text,text)` in Postgres core, except it uses the
+linguistic rules of `collator` to search `substring` in `string`.
+When the substring is not found, it returns 0. Otherwise, It returns
+the 1-based position of the first match of `substring` inside
+`string`.  When `collator` is not passed, the collation of the
+arguments is used. As with the other functions in this extension, the
+two-argument form is faster since it can keep the ICU collation open
+across function calls.
+
+Example:
+
+    -- Search in names independently of punctuation, case and accents
+    =# select name from addresses where
+         icu_strpos(name, 'jeanrene', 'fr-u-ks-level1-ka-shifted') > 0
+
+	   name
+    ------------------
+     jean-rené dupont
+     Jean-René  Dupont
+     jeanrenédupont
+
+<a id="icu_replace"></a>
+### icu_replace(`string` text, `from` text, `to` text  [, `collator` text])
+
+Like `replace(string text, from text, to text)` in Postgres core,
+except it uses the linguistic rules of `collator` to search
+`substring` in `string` instead of a byte-wise comparison. It returns
+`strings` with all substrings that match `from` replaced by `to`.
+When `collator` is not passed, the collation of the arguments is used,
+which is faster because the ICU collation can be kept open across
+function calls.
+
+Example:
+
+    -- Collation comparing independently of punctuation, case and accents
+    =# CREATE COLLATION ciaipi (provider = icu, locale = 'und-u-ks-level1-ka-shifted');
+
+    -- Replace names matching 'jeanrene' by a placeholder
+    =# select s.n,  icu_replace(n, 'jeanrene', '{firstname}' collate "ciaipi")
+         from (values('jeanrenédupont'),('Jean-René  Dupont')) as s(n) ;
+
+	     n         |     icu_replace
+    -------------------+---------------------
+     jeanrenédupont    | {firstname}dupont
+     Jean-René  Dupont | {firstname}  Dupont
+
 
 
 ## License
