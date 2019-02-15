@@ -26,6 +26,7 @@
 PG_FUNCTION_INFO_V1(icu_strpos);
 PG_FUNCTION_INFO_V1(icu_strpos_coll);
 PG_FUNCTION_INFO_V1(icu_replace);
+PG_FUNCTION_INFO_V1(icu_replace_coll);
 
 /*
  * Given @str in the database encoding and @str_utf16 its UTF-16
@@ -355,4 +356,25 @@ icu_replace(PG_FUNCTION_ARGS)
 		collator);
 
 	PG_RETURN_TEXT_P(string);
+}
+
+Datum
+icu_replace_coll(PG_FUNCTION_ARGS)
+{
+	const char	*collname = text_to_cstring(PG_GETARG_TEXT_PP(3));
+	UCollator	*collator = NULL;
+	UErrorCode	status = U_ZERO_ERROR;
+
+	collator = ucol_open(collname, &status);
+	if (!collator || U_FAILURE(status)) {
+		elog(ERROR, "failed to open collation: %s", u_errorName(status));
+	}
+
+	PG_RETURN_TEXT_P(
+		internal_str_replace(
+			PG_GETARG_TEXT_PP(0), /* haystack */
+			PG_GETARG_TEXT_PP(1), /* needle */
+			PG_GETARG_TEXT_PP(2), /* replacement */
+			collator)
+		);
 }
