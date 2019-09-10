@@ -328,7 +328,6 @@ icu_locales_list(PG_FUNCTION_ARGS)
 	MemoryContext oldcontext;
 	TupleDesc	tupdesc;
 	Tuplestorestate *tupstore;
-	UErrorCode	status = U_ZERO_ERROR;
 	int32_t loc_count = uloc_countAvailable();
 	int32_t i;
 	Datum values[7];
@@ -357,6 +356,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 
 	for (i=0; i < loc_count; i++)
 	{
+		UErrorCode	status = U_ZERO_ERROR;
 		int col_num = 0;
 		const char *p = uloc_getAvailable(i);
 
@@ -370,7 +370,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 			char* country;		/* with the database encoding */
 
 			uloc_getDisplayCountry(p, NULL /*ULOC_ENGLISH*/, country_buf,
-								   sizeof(country_buf), &status);
+								   sizeof(country_buf)/sizeof(UChar), &status);
 			if (U_FAILURE(status))
 				elog(ERROR, "uloc_getDisplayCountry() failed on locale '%s': %s",
 					 p, u_errorName(status));
@@ -383,9 +383,10 @@ icu_locales_list(PG_FUNCTION_ARGS)
 
 		/* Language */
 		{
-			UChar lang_buf[100];
+			UChar lang_buf[200];
 			char* language;
-			uloc_getDisplayLanguage(p, NULL, lang_buf, sizeof(lang_buf), &status);
+			uloc_getDisplayLanguage(p, NULL, lang_buf,
+									sizeof(lang_buf)/sizeof(UChar), &status);
 			if (U_FAILURE(status))
 				elog(ERROR, "uloc_getDisplayLanguage() failed on locale '%s': %s",
 					 p, u_errorName(status));
@@ -400,7 +401,8 @@ icu_locales_list(PG_FUNCTION_ARGS)
 		{
 			UChar script_buf[100];
 			char* script;
-			uloc_getDisplayScript(p, NULL, script_buf, sizeof(script_buf), &status);
+			uloc_getDisplayScript(p, NULL, script_buf, sizeof(script_buf)/sizeof(UChar),
+								  &status);
 			if (U_FAILURE(status))
 				elog(ERROR, "uloc_getDisplayScript() failed on locale '%s': %s",
 					 p, u_errorName(status));
