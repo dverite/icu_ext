@@ -106,11 +106,18 @@ internal_strpos(text *txt1, text *txt2, UCollator *collator)
 	int32_t pos;
 
 	/*
-	 * Empty strings never match, and the ICU search API does not
-	 * support them.
+	 * A non-empty substring is never contained by an empty string.
 	 */
-	if (len1 == 0 || len2 == 0)
+	if (len1 == 0 && len2 != 0)
 		return 0;
+
+	/*
+	 * An empty substring is always found at the first character (even
+	 * inside an empty string), to be consistent with strpos() in
+	 * core.
+	 */
+	if (len2 == 0)
+	  return 1;
 
 	ulen1 = icu_to_uchar(&uchar1, VARDATA_ANY(txt1), len1);
 	ulen2 = icu_to_uchar(&uchar2, VARDATA_ANY(txt2), len2);
