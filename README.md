@@ -95,8 +95,8 @@ returned as a set of `(attribute,value)` tuples.  The `collator`
 argument must designate an
 [ICU collator](http://userguide.icu-project.org/collation/api) and accepts
 several different syntaxes. In particular, 
-a [locale ID](http://userguide.icu-project.org/locale) or (if ICU>=54) a
-[language tag](http://www.unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
+a [locale ID](http://userguide.icu-project.org/locale) or (if ICU>=54)
+[language tags](http://www.unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
 may be used.
 Note that this argument is **not** a reference to a PostgreSQL collation, and
 that this function does not depend on whether a corresponding
@@ -174,13 +174,10 @@ string with the given collation.
 See http://userguide.icu-project.org/collation/architecture#TOC-Sort-Keys
 
 When a `collator` argument is passed, it is interpreted as an ICU
-BCP-47 tag that is independent from the collations instantiated in
-PostgreSQL. In this case, the collation associated to `string`
-(either implicitly or explicitly via a COLLATE clause) is ignored:
-the sort key is generated for `collator`.
-
-When there is no `collator` argument, it is the collation associated
-to `string` that is used to generate the sort key. It must be
+locale independently of the persistent collations instantiated in
+the database.
+When there is no `collator` argument, the collation associated
+to `string` gets used to generate the sort key. It must be
 an ICU collation or the function will error out. This form
 with a single argument is faster due to Postgres keeping its
 collations "open" (in the sense of `ucol_open()/ucol_close()`) for the
@@ -188,17 +185,23 @@ duration of the session, whereas the other form with the
 explicit `collator` argument does open and close the ICU collation
 for each call.
 
-Binary sort keys may be useful to circumvent the core PostgreSQL
+Binary sort keys may be useful to circumvent a core PostgreSQL
 limitation that two strings that differ in their byte representation
-are not considered equal (see for instance [this thread](https://www.postgresql.org/message-id/7f0120e8945c4befac964777d31912d7%40exmbdft5.ad.twosigma.com) in the pgsql-bugs mailing-list for a discussion of this problem in relation with the ICU integration).
+are never considered equal by deterministic collations (see for instance [this thread](https://www.postgresql.org/message-id/7f0120e8945c4befac964777d31912d7%40exmbdft5.ad.twosigma.com) in the pgsql-bugs mailing-list for a discussion of this problem in relation with the ICU integration).
+With PostgreSQL 12 or newer versions, the "deterministic" property can be set
+to `false` by [`CREATE COLLATION`](https://www.postgresql.org/docs/current/sql-createcollation.html) to request that string comparisons with these collations skip the tie-breaker.
+With older versions, "deterministic" is always `true`.
 
 You may order or rank by binary sort keys, or materialize them in a unique
 index to achieve at the SQL level what cannot be done internally by
-PostgreSQL for case-insensitive or accent-insensitive collations.
+persistent collations, either because PostgreSQL is not recent enough
+or because you don't want or lack the permission to instantiate
+nondeterministic collations.
+
 
 The function is declared IMMUTABLE to be usable in indexes, but please be
 aware that it's only true as far as the "version" of the collation
-doesn't change. (Typically it changes between major ICU versions). In
+doesn't change. (Typically it changes with every version of Unicode). In
 short, consider rebuilding the affected indexes on ICU upgrades.
 
 To simply compare pairs of strings, consider `icu_compare()` instead.
@@ -227,17 +230,18 @@ Return the result as a signed integer, similarly to strcoll(),
 that is, the result is negative if string1 < string2,
 zero if string = string2, and positive if string1 > string2.
 
-When a `collator` argument is passed, it is interpreted as an ICU
-BCP-47 tag, independently of the collations instantiated in
-PostgreSQL. In this case, the collations associated to `string1`
-and `string2` (either implicitly or explicitly via a COLLATE clause)
-are ignored: the comparison is done with `collator` as the collation.
+When a `collator` argument is passed, it is taken as the ICU
+locale (independently of the collations instantiated in the database)
+to use to collate the strings.
 
-When there is no `collator` argument, it is the collation associated
-to `string1` and `string2` that is used for the comparison.
+When there is no `collator` argument, the collation associated
+to `string1` and `string2` gets used for the comparison.
 It must be an ICU collation and it must be the same for the two
-arguments or the function will error out. This form
-with a single argument is significantly faster due to Postgres keeping its
+arguments or the function will error out. With PostgreSQL 12 or newer,
+it can be nondeterministic, but whether it is nondeterministic
+or deterministic will not make any difference in the result of `icu_compare`,
+contrary to comparisons done by PostgreSQL core with the equality operator.
+The two-argument form is significantly faster due to Postgres keeping its
 collations "open" (in the sense of `ucol_open()/ucol_close()`) for the
 duration of the session, whereas the other form with the
 explicit `collator` argument does open and close the ICU collation
@@ -622,11 +626,13 @@ to transform.
 <a id="icu_strpos"></a>
 ### icu_strpos(`string` text, `substring` text [, `collator` text])
 
-Like `strpos(text,text)` in Postgres core, except it uses the
-linguistic rules of `collator` to search `substring` in `string`.
+Like `strpos(text,text)` in Postgres core, except that it uses the
+linguistic rules of `collator` to search `substring` in `string`,
+and that it supports nondeterministic collations seamlessly.
 When the substring is not found, it returns 0. Otherwise, It returns
 the 1-based position of the first match of `substring` inside
-`string`.  When `collator` is not passed, the collation of the
+`string`, or 1 if `substring` is empty.
+When `collator` is not passed, the collation of the
 arguments is used. As with the other functions in this extension, the
 two-argument form is faster since it can keep the ICU collation open
 across function calls.
@@ -648,8 +654,9 @@ Example:
 
 Like `replace(string text, from text, to text)` in Postgres core,
 except it uses the linguistic rules of `collator` to search
-`substring` in `string` instead of a byte-wise comparison. It returns
-`strings` with all substrings that match `from` replaced by `to`.
+`substring` in `string` instead of a byte-wise comparison. It also
+supports nondeterministic collations to search `from` as a substring.
+It returns `strings` with all substrings that match `from` replaced by `to`.
 When `collator` is not passed, the collation of the arguments is used,
 which is faster because the ICU collation can be kept open across
 function calls.
