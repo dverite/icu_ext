@@ -500,6 +500,7 @@ Example:
 markdown to HTML conversion seems to remove them, so in the above text the spellout
 might appear like a single long word.)
 
+<a id="icu_char_name"></a>
 ### icu_char_name(`c` character)
 
 Return the Unicode character name corresponding to the first codepoint of the input.
