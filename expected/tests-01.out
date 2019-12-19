@@ -1,0 +1,217 @@
+-- regression tests for icu_ext
+CREATE EXTENSION icu_ext;
+-- Check that the database has the built-in ICU collations
+-- required by the tests
+SELECT collname FROM pg_collation WHERE collname IN
+ ('und-x-icu', 'en-x-icu')
+ORDER BY collname;
+ collname  
+-----------
+ en-x-icu
+ und-x-icu
+(2 rows)
+
+-- icu_char_name
+SELECT c, to_hex(ascii(c)), icu_char_name(c)
+   FROM regexp_split_to_table('El Niño', '') as c;
+ c | to_hex |          icu_char_name          
+---+--------+---------------------------------
+ E | 45     | LATIN CAPITAL LETTER E
+ l | 6c     | LATIN SMALL LETTER L
+   | 20     | SPACE
+ N | 4e     | LATIN CAPITAL LETTER N
+ i | 69     | LATIN SMALL LETTER I
+ ñ | f1     | LATIN SMALL LETTER N WITH TILDE
+ o | 6f     | LATIN SMALL LETTER O
+(7 rows)
+
+-- icu_character_boundaries
+SELECT * FROM icu_character_boundaries('Ete'||E'\u0301', 'fr') as chars;
+ chars 
+-------
+ E
+ t
+ é
+(3 rows)
+
+-- icu_collation_attributes
+SELECT * FROM icu_collation_attributes('en-x-icu');
+  attribute  |           value           
+-------------+---------------------------
+ displayname | English (Private-Use=icu)
+ kn          | false
+ kb          | false
+ kk          | false
+ ka          | noignore
+ ks          | level3
+ kf          | false
+ kc          | false
+ version     | 153.80
+(9 rows)
+
+-- icu_compare
+SELECT icu_compare('abcé', 'abce', 'en@colStrength=primary;colCaseLevel=yes');
+ icu_compare 
+-------------
+           0
+(1 row)
+
+SELECT icu_compare('Abcé', 'abce' COLLATE "en-x-icu");
+ icu_compare 
+-------------
+           1
+(1 row)
+
+-- icu_confusable_strings_check
+SELECT txt, icu_confusable_strings_check('phil', txt) AS confusable
+    FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l')) AS s(txt);
+ txt  | confusable 
+------+------------
+ phiL | f
+ phiI | t
+ phi1 | t
+ phıl | t
+(4 rows)
+
+-- icu_line_boundaries
+SELECT *,convert_to( contents, 'utf-8')
+FROM icu_line_boundaries(
+$$Thus much let me avow
+You are not wrong, who deem
+That my days have been a dream;
+Yet if hope has flown away
+In a night, or in a day,$$
+, 'en');
+ tag | contents |    convert_to    
+-----+----------+------------------
+   0 | Thus     | \x5468757320
+   0 | much     | \x6d75636820
+   0 | let      | \x6c657420
+   0 | me       | \x6d6520
+ 100 | avow    +| \x61766f770a
+     |          | 
+   0 | You      | \x596f7520
+   0 | are      | \x61726520
+   0 | not      | \x6e6f7420
+   0 | wrong,   | \x77726f6e672c20
+   0 | who      | \x77686f20
+ 100 | deem    +| \x6465656d0a
+     |          | 
+   0 | That     | \x5468617420
+   0 | my       | \x6d7920
+   0 | days     | \x6461797320
+   0 | have     | \x6861766520
+   0 | been     | \x6265656e20
+   0 | a        | \x6120
+ 100 | dream;  +| \x647265616d3b0a
+     |          | 
+   0 | Yet      | \x59657420
+   0 | if       | \x696620
+   0 | hope     | \x686f706520
+   0 | has      | \x68617320
+   0 | flown    | \x666c6f776e20
+ 100 | away    +| \x617761790a
+     |          | 
+   0 | In       | \x496e20
+   0 | a        | \x6120
+   0 | night,   | \x6e696768742c20
+   0 | or       | \x6f7220
+   0 | in       | \x696e20
+   0 | a        | \x6120
+   0 | day,     | \x6461792c
+(31 rows)
+
+-- icu_number_spellout
+SELECT loc, icu_number_spellout(1234, loc)
+    FROM (values ('en'),('fr'),('de'),('ru'),('ja')) AS s(loc);
+ loc |            icu_number_spellout            
+-----+-------------------------------------------
+ en  | one thousand two hundred thirty-four
+ fr  | mille deux cent trente-quatre
+ de  | ein­tausend­zwei­hundert­vier­und­dreißig
+ ru  | одна тысяча двести тридцать четыре
+ ja  | 千二百三十四
+(5 rows)
+
+-- icu_replace
+SELECT n,
+   icu_replace(
+      n,
+     'jeanrene',
+     '{firstname}',
+     'und@colStrength=primary;colAlternate=shifted')
+FROM (values('jeanrenédupont'),('Jean-René  Dupont')) as s(n)
+ORDER BY n;
+         n         |     icu_replace     
+-------------------+---------------------
+ jeanrenédupont    | {firstname}dupont
+ Jean-René  Dupont | {firstname}  Dupont
+(2 rows)
+
+-- icu_sentence_boundaries
+SELECT * FROM icu_sentence_boundaries('Call me Mr. Brown. It''s a movie.',
+ 'en@ss=standard');
+ tag |      contents       
+-----+---------------------
+   0 | Call me Mr. Brown. 
+   0 | It's a movie.
+(2 rows)
+
+-- icu_sort_key
+SELECT
+ icu_sort_key('été' COLLATE "und-x-icu") as k1,
+ icu_sort_key('été', 'en@colStrength=tertiary') as k2,
+ icu_sort_key('été', 'en@colStrength=primary') as k3;
+           k1           |           k2           |    k3    
+------------------------+------------------------+----------
+ \x314f3101458844880109 | \x314f3101458844880109 | \x314f31
+(1 row)
+
+-- icu_spoof_check
+SELECT txt, icu_spoof_check(txt) FROM
+ (VALUES ('paypal'), (E'p\u0430ypal')) AS s(txt);
+  txt   | icu_spoof_check 
+--------+-----------------
+ paypal | f
+ pаypal | t
+(2 rows)
+
+-- icu_strpos
+SELECT v,icu_strpos('hey rene', v, 'und@colStrength=primary;colAlternate=shifted')
+FROM (VALUES ('René'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), null)
+ AS s(v)
+ORDER BY v;
+ERROR:  syntax error at or near "null"
+LINE 2: ...né'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), null)
+                                                                  ^
+-- icu_transform
+SELECT icu_transform('10\N{SUPERSCRIPT MINUS}\N{SUPERSCRIPT FOUR}'
+		   '\N{MICRO SIGN}m = 1 \N{ANGSTROM SIGN}',
+		 'Name-Any');
+ icu_transform 
+---------------
+ 10⁻⁴µm = 1 Å
+(1 row)
+
+SELECT icu_transform('Ich muß essen.', '[:^ascii:]; Hex');
+    icu_transform    
+---------------------
+ Ich mu\u00DF essen.
+(1 row)
+
+-- icu_word_boundaries
+SELECT * FROM icu_word_boundaries($$Do you like O'Reilly books?$$, 'en');
+ tag | contents 
+-----+----------
+ 200 | Do
+   0 |  
+ 200 | you
+   0 |  
+ 200 | like
+   0 |  
+ 200 | O'Reilly
+   0 |  
+ 200 | books
+   0 | ?
+(10 rows)
+
