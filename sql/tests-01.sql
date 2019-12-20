@@ -16,7 +16,7 @@ SELECT c, to_hex(ascii(c)), icu_char_name(c)
 SELECT * FROM icu_character_boundaries('Ete'||E'\u0301', 'fr') as chars;
 
 -- icu_collation_attributes
-SELECT * FROM icu_collation_attributes('en-x-icu');
+SELECT * FROM icu_collation_attributes('en') WHERE attribute <> 'version';
 
 -- icu_compare
 SELECT icu_compare('abcé', 'abce', 'en@colStrength=primary;colCaseLevel=yes');
@@ -48,28 +48,17 @@ SELECT n,
      '{firstname}',
      'und@colStrength=primary;colAlternate=shifted')
 FROM (values('jeanrenédupont'),('Jean-René  Dupont')) as s(n)
-ORDER BY n;
+ORDER BY n COLLATE "C";
 
 -- icu_sentence_boundaries
 SELECT * FROM icu_sentence_boundaries('Call me Mr. Brown. It''s a movie.',
  'en@ss=standard');
 
--- icu_sort_key
-SELECT
- icu_sort_key('été' COLLATE "und-x-icu") as k1,
- icu_sort_key('été', 'en@colStrength=tertiary') as k2,
- icu_sort_key('été', 'en@colStrength=primary') as k3;
-
-
--- icu_spoof_check
-SELECT txt, icu_spoof_check(txt) FROM
- (VALUES ('paypal'), (E'p\u0430ypal')) AS s(txt);
-
 -- icu_strpos
 SELECT v,icu_strpos('hey rene', v, 'und@colStrength=primary;colAlternate=shifted')
-FROM (VALUES ('René'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), null)
+FROM (VALUES ('René'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), (null))
  AS s(v)
-ORDER BY v;
+ORDER BY v COLLATE "C";
 
 -- icu_transform
 SELECT icu_transform('10\N{SUPERSCRIPT MINUS}\N{SUPERSCRIPT FOUR}'

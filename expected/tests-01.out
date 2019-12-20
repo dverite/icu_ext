@@ -35,10 +35,10 @@ SELECT * FROM icu_character_boundaries('Ete'||E'\u0301', 'fr') as chars;
 (3 rows)
 
 -- icu_collation_attributes
-SELECT * FROM icu_collation_attributes('en-x-icu');
-  attribute  |           value           
--------------+---------------------------
- displayname | English (Private-Use=icu)
+SELECT * FROM icu_collation_attributes('en') WHERE attribute <> 'version';
+  attribute  |  value   
+-------------+----------
+ displayname | English
  kn          | false
  kb          | false
  kk          | false
@@ -46,8 +46,7 @@ SELECT * FROM icu_collation_attributes('en-x-icu');
  ks          | level3
  kf          | false
  kc          | false
- version     | 153.80
-(9 rows)
+(8 rows)
 
 -- icu_compare
 SELECT icu_compare('abcé', 'abce', 'en@colStrength=primary;colCaseLevel=yes');
@@ -141,11 +140,11 @@ SELECT n,
      '{firstname}',
      'und@colStrength=primary;colAlternate=shifted')
 FROM (values('jeanrenédupont'),('Jean-René  Dupont')) as s(n)
-ORDER BY n;
+ORDER BY n COLLATE "C";
          n         |     icu_replace     
 -------------------+---------------------
- jeanrenédupont    | {firstname}dupont
  Jean-René  Dupont | {firstname}  Dupont
+ jeanrenédupont    | {firstname}dupont
 (2 rows)
 
 -- icu_sentence_boundaries
@@ -157,33 +156,23 @@ SELECT * FROM icu_sentence_boundaries('Call me Mr. Brown. It''s a movie.',
    0 | It's a movie.
 (2 rows)
 
--- icu_sort_key
-SELECT
- icu_sort_key('été' COLLATE "und-x-icu") as k1,
- icu_sort_key('été', 'en@colStrength=tertiary') as k2,
- icu_sort_key('été', 'en@colStrength=primary') as k3;
-           k1           |           k2           |    k3    
-------------------------+------------------------+----------
- \x314f3101458844880109 | \x314f3101458844880109 | \x314f31
-(1 row)
-
--- icu_spoof_check
-SELECT txt, icu_spoof_check(txt) FROM
- (VALUES ('paypal'), (E'p\u0430ypal')) AS s(txt);
-  txt   | icu_spoof_check 
---------+-----------------
- paypal | f
- pаypal | t
-(2 rows)
-
 -- icu_strpos
 SELECT v,icu_strpos('hey rene', v, 'und@colStrength=primary;colAlternate=shifted')
-FROM (VALUES ('René'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), null)
+FROM (VALUES ('René'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), (null))
  AS s(v)
-ORDER BY v;
-ERROR:  syntax error at or near "null"
-LINE 2: ...né'), ('rené'), ('Rene'), ('n'), ('në'), ('no'), (''), null)
-                                                                  ^
+ORDER BY v COLLATE "C";
+  v   | icu_strpos 
+------+------------
+      |          1
+ Rene |          5
+ René |          5
+ n    |          7
+ no   |          0
+ në   |          7
+ rené |          5
+      |           
+(8 rows)
+
 -- icu_transform
 SELECT icu_transform('10\N{SUPERSCRIPT MINUS}\N{SUPERSCRIPT FOUR}'
 		   '\N{MICRO SIGN}m = 1 \N{ANGSTROM SIGN}',
