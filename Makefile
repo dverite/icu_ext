@@ -3,7 +3,7 @@ EXTVERSION = 1.5
 
 PG_CONFIG = pg_config
 
-DATA = $(wildcard sql/*.sql)
+DATA = $(wildcard sql/icu_*.sql)
 
 MODULE_big = icu_ext
 OBJS      = icu_ext.o icu_break.o icu_num.o icu_spoof.o icu_transform.o icu_search.o
