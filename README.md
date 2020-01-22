@@ -25,8 +25,10 @@ Build and install with:
 [icu_compare](#icu_compare)  
 [icu_confusable_strings_check](#icu_confusable_strings_check)  
 [icu_default_locale](#icu_default_locale)  
+[icu_is_normalized](#icu_is_normalized)  
 [icu_line_boundaries](#icu_line_boundaries)  
 [icu_locales_list](#icu_locales_list)  
+[icu_normalize](#icu_normalize)  
 [icu_number_spellout](#icu_number_spellout)  
 [icu_replace](#icu_replace)  
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
@@ -675,6 +677,45 @@ Example:
     -------------------+---------------------
      jeanrenédupont    | {firstname}dupont
      Jean-René  Dupont | {firstname}  Dupont
+
+
+<a id="icu_normalize"></a>
+### icu_normalize(`string` text, `form` text)
+
+Return `string` transformed into the Unicode normalized `form`,
+which must be `nfc`, `nfkc`, `nfd`, or `nfkd` (upper case or mixed
+case variants are accepted). Returns NULL if any input argument is NULL.
+The database must use an Unicode encoding, which means UTF-8 in practice.
+See the Unicode Annex [UAX #15](http://unicode.org/reports/tr15/#Introduction)
+for an introduction on Unicode normal forms.
+
+Example:
+
+	=# select icu_normalize('éte'||E'\u0301', 'nfc') = E'ét\u00E9';
+	 ?column?
+	----------
+	 t
+
+<a id="icu_is_normalized"></a>
+### icu_is_normalized(`string` text, `form` text)
+
+Return true if `string` is in the Unicode normalized `form`,
+which must be `nfc`, `nfkc`, `nfd`, or `nfkd` (upper case or mixed
+case variants are accepted). Returns false otherwise, or NULL if
+any input argument is NULL. The database must use an Unicode encoding,
+which means UTF-8 in practice.
+
+Example:
+
+	 =# SELECT icu_is_normalized('ét'||E'\u0301', 'nfc');
+	  icu_is_normalized
+	 -------------------
+	  f
+
+	 =# SELECT icu_is_normalized('ét'||E'\u0301', 'nfd');
+	  icu_is_normalized
+	 -------------------
+	  t
 
 
 
