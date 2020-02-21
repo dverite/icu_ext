@@ -63,8 +63,8 @@ icu_transforms_list(PG_FUNCTION_ARGS)
  * Cache for the last transformation used.
  * This may come in handy in applications that use several times the same transformation
  */
-UTransliterator *utrans = NULL;
-char *cached_utrans_id = NULL;
+static UTransliterator *utrans = NULL;
+static char *cached_utrans_id = NULL;
 
 /*
  * Main function to apply a tranformation based on UTransliterator.
