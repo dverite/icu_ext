@@ -58,6 +58,14 @@ icu_transforms_list(PG_FUNCTION_ARGS)
 
 }
 
+
+/*
+ * Cache for the last transformation used.
+ * This may come in handy in applications that use several times the same transformation
+ */
+static UTransliterator *utrans = NULL;
+static char *cached_utrans_id = NULL;
+
 /*
  * Main function to apply a tranformation based on UTransliterator.
  * Input:
@@ -72,7 +80,6 @@ icu_transform(PG_FUNCTION_ARGS)
 	int32_t len1 = VARSIZE_ANY_EXHDR(arg1);
 	const char *input_id = text_to_cstring(arg2);
 	UErrorCode status = U_ZERO_ERROR;
-	UTransliterator *utrans;
 	int32_t ulen, limit, capacity, start, original_ulen;
 	int32_t result_len, in_ulen;
 	UChar* utext;
@@ -82,9 +89,22 @@ icu_transform(PG_FUNCTION_ARGS)
 
 	bool done = false;
 
-	in_ulen = icu_to_uchar(&trans_id, input_id, strlen(input_id));
+	if (cached_utrans_id != NULL)
+	{
+		if (strcmp(cached_utrans_id, input_id) != 0)
+		{
+			pfree(cached_utrans_id);
+			cached_utrans_id = NULL;
+			utrans_close(utrans);
+			utrans = NULL;
+		}
+	}
 
-	utrans = utrans_openU(trans_id,
+	if (utrans == NULL)
+	{
+		in_ulen = icu_to_uchar(&trans_id, input_id, strlen(input_id));
+
+		utrans = utrans_openU(trans_id,
 						  in_ulen,
 						  UTRANS_FORWARD,
 						  NULL, /* rules. NULL for system transliterators */
@@ -92,9 +112,14 @@ icu_transform(PG_FUNCTION_ARGS)
 						  NULL, /* pointer to parseError. Not used */
 						  &status);
 
-	if (U_FAILURE(status) || !utrans)
-	{
-		elog(ERROR, "utrans_open failed: %s", u_errorName(status));
+		if (U_FAILURE(status) || !utrans)
+		{
+			elog(ERROR, "utrans_open failed: %s", u_errorName(status));
+		}
+		else
+		{
+			cached_utrans_id = MemoryContextStrdup(TopMemoryContext, input_id);
+		}
 	}
 
 	ulen = icu_to_uchar(&utext, text_to_cstring(arg1), len1);
@@ -153,7 +178,6 @@ icu_transform(PG_FUNCTION_ARGS)
 		elog(ERROR, "utrans_transUChars failed: %s", u_errorName(status));
 	}
 
-	utrans_close(utrans);
 	result_len = icu_from_uchar(&result, utext, ulen);
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result, result_len));
 }
