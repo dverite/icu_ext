@@ -172,12 +172,6 @@ icu_transform(PG_FUNCTION_ARGS)
 			done = true;
 	} while (!done);
 
-	if (U_FAILURE(status))
-	{
-		utrans_close(utrans);
-		elog(ERROR, "utrans_transUChars failed: %s", u_errorName(status));
-	}
-
 	result_len = icu_from_uchar(&result, utext, ulen);
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result, result_len));
 }
