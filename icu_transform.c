@@ -12,6 +12,7 @@
 #include "funcapi.h"
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"
+#include "utils/memutils.h"
 
 #include "unicode/uenum.h"
 #include "unicode/utrans.h"
