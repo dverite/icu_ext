@@ -139,7 +139,8 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 	/* name (not a real attribute, added for convenience) */
 	if (include_defaults)
 	{
-		UChar dname_local[100];
+		/* Use a large initial buffer to avoid bug ICU-21157 */
+		UChar dname_local[500];
 		UChar *dname = dname_local;
 		char *buf;
 		int32_t ulen;
@@ -147,7 +148,7 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 		ulen = uloc_getDisplayName(locale,
 								   NULL,
 								   dname,
-								   sizeof(dname_local)-1,
+								   sizeof(dname_local)/sizeof(UChar),
 								   &status);
 		if (status == U_BUFFER_OVERFLOW_ERROR)
 		{
