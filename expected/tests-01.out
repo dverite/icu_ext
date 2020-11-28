@@ -46,7 +46,8 @@ SELECT * FROM icu_collation_attributes('en') WHERE attribute <> 'version';
  ks          | level3
  kf          | false
  kc          | false
-(8 rows)
+ kv          | punct
+(9 rows)
 
 -- icu_compare
 SELECT icu_compare('abcé', 'abce', 'en@colStrength=primary;colCaseLevel=yes');
