@@ -111,7 +111,7 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 
 	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
 		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),	
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			 errmsg("set-valued function called in context that cannot accept a set")));
 
 	/* Switch into long-lived context to construct returned data structures */
@@ -441,7 +441,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 
 	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
 		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),	
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			 errmsg("set-valued function called in context that cannot accept a set")));
 
 	/* Switch into long-lived context to construct returned data structures */
@@ -537,7 +537,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 			default:
 				layout = ""; break;
 			}
-			
+
 			col_num = add_string(layout, col_num, values, nulls);
 		}
 
@@ -672,7 +672,7 @@ Datum
 icu_compare_coll(PG_FUNCTION_ARGS)
 {
 	text *txt1 = PG_GETARG_TEXT_PP(0);
-	text *txt2 = PG_GETARG_TEXT_PP(1);	
+	text *txt2 = PG_GETARG_TEXT_PP(1);
 	const char *collname = text_to_cstring(PG_GETARG_TEXT_P(2));
 	UCollator	*collator = NULL;
 	UErrorCode	status = U_ZERO_ERROR;
@@ -699,7 +699,7 @@ Datum
 icu_compare(PG_FUNCTION_ARGS)
 {
 	text *txt1 = PG_GETARG_TEXT_PP(0);
-	text *txt2 = PG_GETARG_TEXT_PP(1);	
+	text *txt2 = PG_GETARG_TEXT_PP(1);
 	UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
 	UCollationResult result;
 
@@ -794,7 +794,7 @@ icu_sort_key_coll(PG_FUNCTION_ARGS)
 
 	ulen = icu_to_uchar(&ustring, VARDATA_ANY(txt), VARSIZE_ANY_EXHDR(txt));
 
- 	collator = ucol_open(locname, &status);
+	collator = ucol_open(locname, &status);
 	if (!collator)
 		elog(ERROR, "failed to open collation");
 
