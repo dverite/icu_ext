@@ -1,5 +1,5 @@
 EXTENSION  = icu_ext
-EXTVERSION = 1.6.1
+EXTVERSION = 1.6.2
 
 PG_CONFIG = pg_config
 
