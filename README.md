@@ -122,6 +122,7 @@ to the `lc_collate` argument of CREATE COLLATION).
       ks          | level3
       kf          | false
       kc          | false
+      kv          | punct
       version     | 153.80.33
 
 

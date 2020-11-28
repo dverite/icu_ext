@@ -12,6 +12,7 @@
 #include "catalog/pg_collation.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "lib/stringinfo.h"
 #include "miscadmin.h"
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
@@ -22,6 +23,7 @@
 #include "unicode/ucol.h"
 #include "unicode/uloc.h"
 #include "unicode/umachine.h"
+#include "unicode/uscript.h"
 #include "unicode/ustring.h"
 #include "unicode/utext.h"
 #include "unicode/uvernum.h"
@@ -281,6 +283,109 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 		values[0] = CStringGetTextDatum("kc");
 		values[1] = CStringGetTextDatum(txt);
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+	}
+
+	/* Max variable (key:kv) */
+	{
+		UColReorderCode reorder_code = ucol_getMaxVariable(collator);
+		const char *code_name = NULL;
+		switch(reorder_code)
+		{
+			case UCOL_REORDER_CODE_SPACE:
+				code_name = "space";
+				break;
+			case UCOL_REORDER_CODE_PUNCTUATION:
+				code_name = "punct";
+				break;
+			case UCOL_REORDER_CODE_SYMBOL:
+				code_name = "symbol";
+				break;
+			case UCOL_REORDER_CODE_CURRENCY:
+				code_name = "currency";
+				break;
+			case UCOL_REORDER_CODE_DIGIT:
+				code_name = "digit";
+				break;
+			default:
+				break;
+		}
+		/* "punct" is the default. Omit it unless include_defaults is set */
+		if (code_name != NULL && (include_defaults ||
+					  reorder_code != UCOL_REORDER_CODE_PUNCTUATION))
+		{
+			values[0] = CStringGetTextDatum("kv");
+			values[1] = CStringGetTextDatum(code_name);
+			tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+		}
+	}
+
+	/* Reorder codes (key:kr) */
+	{
+		UErrorCode status = U_ZERO_ERROR;
+		StringInfoData aggr_values;  /* 4-letter codes separated by hyphens */
+		int32_t *reorder_codes = NULL;
+		int32_t nb_reorderings = ucol_getReorderCodes(collator,
+												NULL,
+												0,
+												&status);
+		if (status != U_BUFFER_OVERFLOW_ERROR && U_FAILURE(status))
+			elog(ERROR, "uloc_getReorderCodes failed: %s", u_errorName(status));
+
+		initStringInfo(&aggr_values);
+
+		if (nb_reorderings > 0)
+		{
+			reorder_codes = palloc(nb_reorderings*sizeof(int32_t));
+			status = U_ZERO_ERROR;
+			nb_reorderings = ucol_getReorderCodes(collator,
+												  reorder_codes,
+												  nb_reorderings,
+												  &status);
+			if (status != U_BUFFER_OVERFLOW_ERROR && U_FAILURE(status))
+				elog(ERROR, "uloc_getReorderCodes failed: %s", u_errorName(status));
+		}
+
+		for (uint32_t idx=0; idx < nb_reorderings; idx++)
+		{
+			const char *value = NULL;
+			if (reorder_codes[idx] >= UCOL_REORDER_CODE_FIRST)
+			{
+				switch(reorder_codes[idx])
+				{
+					case UCOL_REORDER_CODE_SPACE:
+						value = "space";
+						break;
+					case UCOL_REORDER_CODE_PUNCTUATION:
+						value = "punct";
+						break;
+					case UCOL_REORDER_CODE_SYMBOL:
+						value = "symbol";
+						break;
+					case UCOL_REORDER_CODE_CURRENCY:
+						value = "currency";
+						break;
+					case UCOL_REORDER_CODE_DIGIT:
+						value = "digit";
+						break;
+				}
+			}
+			else
+			{
+				value  = uscript_getShortName((UScriptCode)reorder_codes[idx]);
+			}
+			if (value != NULL)
+			{
+				if (idx >= 1)
+					appendStringInfoChar(&aggr_values, '-');
+				appendStringInfoString(&aggr_values, value);
+			}
+		}
+		if (aggr_values.len > 0)
+		{
+			values[0] = CStringGetTextDatum("kr");
+			values[1] = CStringGetTextDatum(aggr_values.data);
+			tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+		}
 	}
 
 	/* version (not a real attribute, added for convenience) */
