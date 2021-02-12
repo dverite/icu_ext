@@ -317,6 +317,7 @@ This is comparable to calling `regexp_split_to_table` with an empty regexp,
 with some differences, for instance:
 - CRLF sequences do not get split into two characters.
 - Sequences with a base and a combining character are kept together.
+- Legacy and extended grapheme clusters are extracted as one result per grapheme.
 
 Example (the "e" followed by the combining acute accent U+0301 may be
 rendered as an accented e or differently depending on your browser):
@@ -330,7 +331,8 @@ rendered as an accented e or differently depending on your browser):
 
 See [Boundary
 Analysis](http://userguide.icu-project.org/boundaryanalysis) in the
-ICU User Guide for more information.
+ICU User Guide and [UAX #29 (Unicode Text Segmentation)](http://unicode.org/reports/tr29/)
+for more information.
 
 <a id="icu_word_boundaries"></a>
 ### icu_word_boundaries (`string` text, `locale` text)
