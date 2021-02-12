@@ -98,7 +98,7 @@ argument must designate an
 [ICU collator](http://userguide.icu-project.org/collation/api) and accepts
 several different syntaxes. In particular, 
 a [locale ID](http://userguide.icu-project.org/locale) or (if ICU>=54)
-[language tags](http://www.unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
+[language tags](https://unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
 may be used.
 Note that this argument is **not** a reference to a PostgreSQL collation, and
 that this function does not depend on whether a corresponding
@@ -331,7 +331,7 @@ rendered as an accented e or differently depending on your browser):
 
 See [Boundary
 Analysis](http://userguide.icu-project.org/boundaryanalysis) in the
-ICU User Guide and [UAX #29 (Unicode Text Segmentation)](http://unicode.org/reports/tr29/)
+ICU User Guide and [UAX #29 (Unicode Text Segmentation)](https://unicode.org/reports/tr29/)
 for more information.
 
 <a id="icu_word_boundaries"></a>
@@ -391,7 +391,7 @@ or to count words in english:
 ### icu_line_boundaries (`string` text, `locale` text)
 
 Split the string into pieces where a line break may occur, according
-to the Unicode line breaking algorithm defined in [UAX #14](http://unicode.org/reports/tr14/),
+to the Unicode line breaking algorithm defined in [UAX #14](https://unicode.org/reports/tr14/),
 and return them in a set of (tag, contents) tuples.
 `tag` has values from the [ULineBreakTag enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the break.
 The current values are:
@@ -458,7 +458,7 @@ Example:
 
 
 Split the string into sentences, according the Unicode text segmentation
-rules defined in [UAX #29](http://unicode.org/reports/tr29/),
+rules defined in [UAX #29](https://unicode.org/reports/tr29/),
 and return them in a set of (tag, contents) tuples.
 `tag` has values from the [USentenceBreakTag enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the break.
 The current values are:
@@ -531,8 +531,8 @@ Example:
 
 Return a boolean indicating whether the argument is likely to be an
 attempt at confusing a reader.  The implementation is based on Unicode
-Technical Reports [#36](http://unicode.org/reports/tr36) and
-[#39](http://unicode.org/reports/tr39) and uses the ICU default
+Technical Reports [#36](https://unicode.org/reports/tr36) and
+[#39](https://unicode.org/reports/tr39) and uses the ICU default
 settings for spoof checks.
 
 Example:
@@ -552,7 +552,7 @@ SMALL LETTER A) instead of the genuine ASCII U+0061 (LATIN SMALL LETTER A))
 
 Return a boolean indicating whether the string arguments are visually
 confusable with each other, according to data described in [Unicode
-Technical Report #39](http://unicode.org/reports/tr39/#Confusable_Detection).
+Technical Report #39](https://unicode.org/reports/tr39/#Confusable_Detection).
 The settings and comparison levels are ICU defaults. For strictly
 identical strings, it returns true.
 
@@ -689,7 +689,7 @@ Return `string` transformed into the Unicode normalized `form`,
 which must be `nfc`, `nfkc`, `nfd`, or `nfkd` (upper case or mixed
 case variants are accepted). Returns NULL if any input argument is NULL.
 The database must use an Unicode encoding, which means UTF-8 in practice.
-See the Unicode Annex [UAX #15](http://unicode.org/reports/tr15/#Introduction)
+See the Unicode Annex [UAX #15](https://unicode.org/reports/tr15/#Introduction)
 for an introduction on Unicode normal forms.
 
 Example:
