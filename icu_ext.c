@@ -46,6 +46,15 @@ PG_FUNCTION_INFO_V1(icu_sort_key_coll);
 PG_FUNCTION_INFO_V1(icu_char_name);
 
 
+/*
+ * GUC parameters
+ */
+char *icu_ext_default_locale;
+char *icu_ext_date_format;
+char *icu_ext_timestamptz_format;
+
+void		_PG_init(void);
+
 Datum
 icu_version(PG_FUNCTION_ARGS)
 {
@@ -884,4 +893,46 @@ icu_char_name(PG_FUNCTION_ARGS)
 		elog(ERROR, "u_charName failed: %s", u_errorName(status));
 	else
 		PG_RETURN_TEXT_P(cstring_to_text(buffer));
+}
+
+/*
+ * Module load callback
+ */
+void
+_PG_init(void)
+{
+	DefineCustomStringVariable("icu_ext.locale",
+							   "Sets the default locale to use by ICU functions.",
+							   NULL,
+							   &icu_ext_default_locale,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	DefineCustomStringVariable("icu_ext.date_format",
+							   "Sets the default input/output format for dates.",
+							   NULL,
+							   &icu_ext_date_format,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	DefineCustomStringVariable("icu_ext.timestamptz_format",
+							   "Sets the default input/output format for timestamptz values.",
+							   NULL,
+							   &icu_ext_timestamptz_format,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	EmitWarningsOnPlaceholders("icu_ext");
 }

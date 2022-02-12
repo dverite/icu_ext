@@ -4,7 +4,7 @@
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
  *
- * By Daniel Vérité, 2018-2021. See LICENSE.md
+ * By Daniel Vérité, 2018-2022. See LICENSE.md
  */
 
 /* Postgres includes */
@@ -14,7 +14,8 @@
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
 #include "utils/pg_locale.h"
-
+#include "utils/date.h"
+#include "utils/datetime.h"
 
 /* ICU includes */
 #include "unicode/ucal.h"
@@ -29,6 +30,12 @@ PG_FUNCTION_INFO_V1(icu_format_date_locale);
 PG_FUNCTION_INFO_V1(icu_format_date_default_locale);
 PG_FUNCTION_INFO_V1(icu_parse_date_locale);
 PG_FUNCTION_INFO_V1(icu_parse_date_default_locale);
+PG_FUNCTION_INFO_V1(icu_add_interval);
+PG_FUNCTION_INFO_V1(icu_add_interval_default_locale);
+PG_FUNCTION_INFO_V1(icu_diff_timestamps);
+PG_FUNCTION_INFO_V1(icu_diff_timestamps_default_locale);
+PG_FUNCTION_INFO_V1(icu_date_in);
+PG_FUNCTION_INFO_V1(icu_date_out);
 
 
 /* Convert a Postgres timestamp into an ICU timestamp */
@@ -44,9 +51,9 @@ ts_to_udate(TimestampTz pg_tstz)
 	 * Ideally these implementation details should not be relied upon here
 	 * but there doesn't seem to be a function udat_xxx() to set the date
 	 * from an epoch.
-	 * FIXME: alternatively we could extract the year/month/..etc.. fields from pg_tstz
+	 * Alternatively we could extract the year/month/..etc.. fields from pg_tstz
 	 * and set them one by one in a gregorian calendar with ucal_set(cal, field, value),
-	 * and then obtain the UDate with ucal_getMillis(cal)
+	 * and then obtain the UDate with ucal_getMillis(cal), but it would be slower.
 	 */
 
 	return (UDate)(10957.0*86400*1000 + pg_tstz/1000);
@@ -64,6 +71,11 @@ udate_to_ts(const UDate ud)
 	return (TimestampTz)(ud*1000 - 10957LL*86400*1000*1000);
 }
 
+
+/*
+ * Return a text representation of a PG timestamp given the locale and ICU format.
+ * locale==NULL means the default locale.
+ */
 
 static Datum
 icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
@@ -197,3 +209,238 @@ icu_parse_date_default_locale(PG_FUNCTION_ARGS)
 						  PG_GETARG_TEXT_PP(1),
 						  NULL);
 }
+
+/*
+ * Add an interval to a timestamp with timezone, given a localized calendar.
+ * if locale==NULL, use the current ICU locale.
+ */
+static
+Datum
+add_interval(TimestampTz ts, Interval *ival, const char *locale)
+{
+	UErrorCode status = U_ZERO_ERROR;
+	UDate date_time = ts_to_udate(ts);
+	UCalendar *ucal;
+
+	ucal = ucal_open(NULL, /* default zoneID */
+					 0,
+					 locale,
+					 UCAL_DEFAULT,
+					 &status);
+	if (U_FAILURE(status))
+	{
+		elog(ERROR, "ucal_open failed: %s\n", u_errorName(status));
+	}
+
+	ucal_setMillis(ucal, date_time, &status);
+
+	/* Add months and days, with the rules of the given calendar */
+	if (ival->month != 0)
+		ucal_add(ucal, UCAL_MONTH, ival->month, &status);
+
+	if (ival->day != 0)
+		ucal_add(ucal, UCAL_DAY_OF_MONTH, ival->day, &status);
+
+	/* Translate back to a UDate, and then to a postgres timestamptz */
+	date_time = ucal_getMillis(ucal, &status);
+	ucal_close(ucal);
+
+	if (U_FAILURE(status))
+	{
+		elog(ERROR, "calendar translation failed: %s\n", u_errorName(status));
+	}
+
+	PG_RETURN_TIMESTAMPTZ(udate_to_ts(date_time));
+}
+
+Datum
+icu_add_interval(PG_FUNCTION_ARGS)
+{
+	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
+	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
+	const char *locale = text_to_cstring(PG_GETARG_TEXT_PP(2));
+
+	return add_interval(pg_tstz, pg_interval, locale);
+}
+
+Datum
+icu_add_interval_default_locale(PG_FUNCTION_ARGS)
+{
+	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
+	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
+
+	return add_interval(pg_tstz, pg_interval, NULL);
+}
+
+Datum
+icu_diff_timestamps(PG_FUNCTION_ARGS)
+{
+	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
+	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
+	/*
+	  delta interval,
+	  locale text
+	*/
+	long diff = TimestampDifferenceMilliseconds(pg_tstz1, pg_tstz2);
+	Interval *interv = (Interval*)palloc0(sizeof(Interval));
+	interv->time = diff*1000;	/* TimeOffset has units of microseconds */
+	/*
+	  fsec_t fsec = 0;
+	  tm2interval(&tm, fsec, &interv);
+	*/
+	PG_RETURN_INTERVAL_P(interv);
+}
+
+Datum
+icu_diff_timestamps_default_locale(PG_FUNCTION_ARGS)
+{
+	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
+	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
+
+	Interval *interv = (Interval*)palloc0(sizeof(Interval));
+	interv->time = pg_tstz2 - pg_tstz1;	/* TimeOffset has units of microseconds */
+	PG_RETURN_INTERVAL_P(interv);
+}
+
+Datum
+icu_date_in(PG_FUNCTION_ARGS)
+{
+#if 0
+	char *str = PG_GETARG_CSTRING(0);
+	DateADT		date;
+	date = 0;
+	PG_RETURN_DATEADT(date);
+#else
+	char	   *str = PG_GETARG_CSTRING(0);
+	DateADT		date;
+	fsec_t		fsec;
+	struct pg_tm tt,
+			   *tm = &tt;
+	int			tzp;
+	int			dtype;
+	int			nf;
+	int			dterr;
+	char	   *field[MAXDATEFIELDS];
+	int			ftype[MAXDATEFIELDS];
+	char		workbuf[MAXDATELEN + 1];
+
+	dterr = ParseDateTime(str, workbuf, sizeof(workbuf),
+						  field, ftype, MAXDATEFIELDS, &nf);
+	if (dterr == 0)
+		dterr = DecodeDateTime(field, ftype, nf, &dtype, tm, &fsec, &tzp);
+	if (dterr != 0)
+		DateTimeParseError(dterr, str, "date");
+
+	switch (dtype)
+	{
+		case DTK_DATE:
+			break;
+
+		case DTK_EPOCH:
+			GetEpochTime(tm);
+			break;
+
+		case DTK_LATE:
+			DATE_NOEND(date);
+			PG_RETURN_DATEADT(date);
+
+		case DTK_EARLY:
+			DATE_NOBEGIN(date);
+			PG_RETURN_DATEADT(date);
+
+		default:
+			DateTimeParseError(DTERR_BAD_FORMAT, str, "date");
+			break;
+	}
+
+	/* Prevent overflow in Julian-day routines */
+	if (!IS_VALID_JULIAN(tm->tm_year, tm->tm_mon, tm->tm_mday))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("date out of range: \"%s\"", str)));
+
+	date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+
+	/* Now check for just-out-of-range dates */
+	if (!IS_VALID_DATE(date))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("date out of range: \"%s\"", str)));
+
+	PG_RETURN_DATEADT(date);
+#endif	
+}
+
+/* Convert a postgres date (number of days since 1/1/2000) to a UDate */
+static UDate
+dateadt_to_udate(DateADT pg_date)
+{
+	/* simple version */
+	return (UDate)(
+		(double)(pg_date+(POSTGRES_EPOCH_JDATE-UNIX_EPOCH_JDATE)) /* days since Unix epoch */
+		*86400.0*1000 /* multiplied by the number of milliseconds in a day */
+		);
+}
+
+
+Datum
+icu_date_out(PG_FUNCTION_ARGS)
+{
+	DateADT date = PG_GETARG_DATEADT(0);
+	char	buf[MAXDATELEN + 1];
+
+	UErrorCode status = U_ZERO_ERROR;
+	UDateFormat* df = NULL;
+	UDate udate;
+	const char *locale = NULL;
+	char *result;
+	
+	if (DATE_NOT_FINITE(date))
+	{
+		EncodeSpecialDate(date, buf);
+		result = pstrdup(buf);
+	}
+	else
+	{
+		udate = dateadt_to_udate(date);
+
+		df = udat_open(UDAT_NONE,	 /* timeStyle */
+					   UDAT_DEFAULT, /* dateStyle */
+					   locale,		 /* NULL for the default locale */
+					   NULL,			/* tzID (NULL=default). */
+					   -1,			/* tzIDLength */
+					   NULL,		/* pattern */
+					   -1,			/* patternLength */
+					   &status);
+		if (U_FAILURE(status))
+			elog(ERROR, "udat_open failed with code %d\n", status);
+		{
+			/* TODO: try first with a buffer of MAXDATELEN*sizeof(UChar) size */
+			int32_t u_buffer_size = udat_format(df, udate, NULL, 0, NULL, &status);
+
+			if(status == U_BUFFER_OVERFLOW_ERROR)
+			{
+				UChar* u_buffer;
+				status = U_ZERO_ERROR;
+				u_buffer = (UChar*) palloc(u_buffer_size*sizeof(UChar));
+				udat_format(df, udate, u_buffer, u_buffer_size, NULL, &status);
+				icu_from_uchar(&result, u_buffer, u_buffer_size);
+			}
+			else
+			{
+				result = pstrdup("");
+			}
+		}
+		if (df)
+			udat_close(df);
+	}
+	PG_RETURN_CSTRING(result);
+}
+
+/*
+ GUC:
+ icu_ext.date_locale
+ icu_ext.datestyle
+ icu_ext.timestyle
+
+*/
