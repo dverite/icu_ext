@@ -12,3 +12,6 @@
 
 UCollator* ucollator_from_coll_id(Oid collid);
 
+extern char *icu_ext_default_locale;
+extern char *icu_ext_date_format;
+extern char *icu_ext_timestamptz_format;

@@ -189,3 +189,7 @@ OPERATOR 3 =,
 OPERATOR 4 >=,
 OPERATOR 5 >,
 FUNCTION 1 icu_date_cmp(icu_date, icu_date);
+
+CREATE CAST (icu_date AS date) WITHOUT FUNCTION AS IMPLICIT;
+CREATE CAST (date AS icu_date) WITHOUT FUNCTION AS IMPLICIT;
+

@@ -98,7 +98,7 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 	df = udat_open(UDAT_PATTERN, /* timeStyle */
 				   UDAT_PATTERN, /* dateStyle */
 				   locale,		 /* NULL for the default locale */
-				   NULL,			/* tzID (NULL=default). FIXME (use  */
+				   NULL,			/* tzID (NULL=default). FIXME  */
 				   -1,			/* tzIDLength */
 				   pattern_buf,
 				   pattern_length,
@@ -302,73 +302,88 @@ icu_diff_timestamps_default_locale(PG_FUNCTION_ARGS)
 	PG_RETURN_INTERVAL_P(interv);
 }
 
+/*
+ * Input function for text representation of icu_date.
+ */
 Datum
 icu_date_in(PG_FUNCTION_ARGS)
 {
-#if 0
-	char *str = PG_GETARG_CSTRING(0);
-	DateADT		date;
-	date = 0;
-	PG_RETURN_DATEADT(date);
-#else
-	char	   *str = PG_GETARG_CSTRING(0);
-	DateADT		date;
-	fsec_t		fsec;
+	char	   *date_string = PG_GETARG_CSTRING(0);
+	int32_t pattern_length = -1;
+	UChar *u_date_string;
+	int32_t u_date_length;
+	UDateFormat* df = NULL;
+	UDate udat;
+	UErrorCode status = U_ZERO_ERROR;
+	UChar *input_pattern = NULL;
+	Timestamp pg_ts;
+	const char *locale = NULL;
+	DateADT		result;
 	struct pg_tm tt,
 			   *tm = &tt;
-	int			tzp;
-	int			dtype;
-	int			nf;
-	int			dterr;
-	char	   *field[MAXDATEFIELDS];
-	int			ftype[MAXDATEFIELDS];
-	char		workbuf[MAXDATELEN + 1];
-
-	dterr = ParseDateTime(str, workbuf, sizeof(workbuf),
-						  field, ftype, MAXDATEFIELDS, &nf);
-	if (dterr == 0)
-		dterr = DecodeDateTime(field, ftype, nf, &dtype, tm, &fsec, &tzp);
-	if (dterr != 0)
-		DateTimeParseError(dterr, str, "date");
-
-	switch (dtype)
+	fsec_t		fsec;
+	int32_t parse_pos = 0;
+	UChar* tzid;
+	int32_t tzid_length;
+	
+	if (icu_ext_date_format != NULL && icu_ext_date_format[0] != '\0')
 	{
-		case DTK_DATE:
-			break;
-
-		case DTK_EPOCH:
-			GetEpochTime(tm);
-			break;
-
-		case DTK_LATE:
-			DATE_NOEND(date);
-			PG_RETURN_DATEADT(date);
-
-		case DTK_EARLY:
-			DATE_NOBEGIN(date);
-			PG_RETURN_DATEADT(date);
-
-		default:
-			DateTimeParseError(DTERR_BAD_FORMAT, str, "date");
-			break;
+		pattern_length = icu_to_uchar(&input_pattern,
+									  icu_ext_date_format,
+									  strlen(icu_ext_date_format));
 	}
 
-	/* Prevent overflow in Julian-day routines */
-	if (!IS_VALID_JULIAN(tm->tm_year, tm->tm_mon, tm->tm_mday))
+	u_date_length = icu_to_uchar(&u_date_string, date_string, strlen(date_string));
+	
+	if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
+	{
+		locale = icu_ext_default_locale;
+	}
+
+	tzid_length = icu_to_uchar(&tzid,
+							   UCAL_UNKNOWN_ZONE_ID, /* like GMT */
+							   strlen(UCAL_UNKNOWN_ZONE_ID));
+
+	/* if UDAT_PATTERN is used, we must pass it for both timeStyle and dateStyle */
+	df = udat_open(input_pattern ? UDAT_PATTERN : UDAT_NONE,	 /* timeStyle */
+				   input_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
+				   locale,
+				   tzid,		/* tzID */
+				   tzid_length,			/* tzIDLength */
+				   input_pattern,
+				   pattern_length,
+				   &status);
+	if (U_FAILURE(status))
+	{
+		udat_close(df);
+		elog(ERROR, "udat_open failed: %s\n", u_errorName(status));
+	}
+
+	udat = udat_parse(df,
+					   u_date_string,
+					   u_date_length,
+					   &parse_pos,
+					   &status);
+	udat_close(df);
+
+	elog(DEBUG1, "udat_parse('%s'[%d], '%s' ) => %f, parse_pos=%d",
+		 date_string, u_strlen(u_date_string), icu_ext_date_format, udat, parse_pos);
+
+	if (U_FAILURE(status))
+		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
+
+
+	/* convert UDate to julian days, with an intermediate Timestamp to use date2j */
+	pg_ts = udate_to_ts(udat);
+
+	if (timestamp2tm(pg_ts, NULL, tm, &fsec, NULL, NULL) != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-				 errmsg("date out of range: \"%s\"", str)));
+				 errmsg("date out of range: \"%s\"", date_string)));
 
-	date = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+	result = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
 
-	/* Now check for just-out-of-range dates */
-	if (!IS_VALID_DATE(date))
-		ereport(ERROR,
-				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-				 errmsg("date out of range: \"%s\"", str)));
-
-	PG_RETURN_DATEADT(date);
-#endif	
+	PG_RETURN_DATEADT(result);
 }
 
 /* Convert a postgres date (number of days since 1/1/2000) to a UDate */
@@ -402,15 +417,31 @@ icu_date_out(PG_FUNCTION_ARGS)
 	}
 	else
 	{
+		UChar *output_pattern = NULL;
+		int32_t pattern_length = -1;
+
 		udate = dateadt_to_udate(date);
 
-		df = udat_open(UDAT_NONE,	 /* timeStyle */
-					   UDAT_DEFAULT, /* dateStyle */
+		if (icu_ext_date_format != NULL && icu_ext_date_format[0] != '\0')
+		{
+			pattern_length = icu_to_uchar(&output_pattern,
+										  icu_ext_date_format,
+										  strlen(icu_ext_date_format));
+		}
+
+		if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
+		{
+			locale = icu_ext_default_locale;
+		}
+
+		/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
+		df = udat_open(output_pattern ? UDAT_PATTERN : UDAT_NONE,	 /* timeStyle */
+					   output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
 					   locale,		 /* NULL for the default locale */
 					   NULL,			/* tzID (NULL=default). */
 					   -1,			/* tzIDLength */
-					   NULL,		/* pattern */
-					   -1,			/* patternLength */
+					   output_pattern,		/* pattern */
+					   pattern_length,			/* patternLength */
 					   &status);
 		if (U_FAILURE(status))
 			elog(ERROR, "udat_open failed with code %d\n", status);
@@ -439,8 +470,7 @@ icu_date_out(PG_FUNCTION_ARGS)
 
 /*
  GUC:
- icu_ext.date_locale
- icu_ext.datestyle
- icu_ext.timestyle
-
+ icu_ext.locale
+ icu_ext.date_format
+ icu_ext.timestamptz_format
 */
