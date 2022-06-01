@@ -1,6 +1,6 @@
 # icu_ext
 
-An extension to expose functionality from [ICU](http://icu-project.org) to PostgreSQL applications.
+An extension to expose functionality from [ICU](https://icu.unicode.org/) to PostgreSQL applications.
 
 It requires PostgreSQL version 10 or newer, configured with ICU
 (--with-icu).
@@ -95,9 +95,9 @@ PostgreSQL (found in `pg_collation`).
 Lists the attributes, version and display name of an ICU collation,
 returned as a set of `(attribute,value)` tuples.  The `collator`
 argument must designate an
-[ICU collator](http://userguide.icu-project.org/collation/api) and accepts
+[ICU collator](https://unicode-org.github.io/icu/userguide/collation/api) and accepts
 several different syntaxes. In particular, 
-a [locale ID](http://userguide.icu-project.org/locale) or (if ICU>=54)
+a [locale ID](https://unicode-org.github.io/icu/userguide/locale) or (if ICU>=54)
 [language tags](https://unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
 may be used.
 Note that this argument is **not** a reference to a PostgreSQL collation, and
@@ -174,7 +174,7 @@ a collator with the given argument.
 
 Returns the binary sort key (type: `bytea`) corresponding to the
 string with the given collation.
-See http://userguide.icu-project.org/collation/architecture#TOC-Sort-Keys
+See https://unicode-org.github.io/icu/userguide/collation/architecture#sort-keys
 
 When a `collator` argument is passed, it is interpreted as an ICU
 locale independently of the persistent collations instantiated in
@@ -330,7 +330,7 @@ rendered as an accented e or differently depending on your browser):
      é
 
 See [Boundary
-Analysis](http://userguide.icu-project.org/boundaryanalysis) in the
+Analysis](https://unicode-org.github.io/icu/userguide/boundaryanalysis/) in the
 ICU User Guide and [UAX #29 (Unicode Text Segmentation)](https://unicode.org/reports/tr29/)
 for more information.
 
@@ -339,7 +339,7 @@ for more information.
 
 Break down the string into words and non-words constituents,
 and return them in a set of (tag, contents) tuples.
-`tag` has values from the [UWordBreak enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the piece of contents.
+`tag` has values from the [UWordBreak enum][ubrk_source] defined in ubrk.h indicating the nature of the piece of contents.
 The current values are:
 
     UBRK_WORD_NONE           = 0,
@@ -393,7 +393,7 @@ or to count words in english:
 Split the string into pieces where a line break may occur, according
 to the Unicode line breaking algorithm defined in [UAX #14](https://unicode.org/reports/tr14/),
 and return them in a set of (tag, contents) tuples.
-`tag` has values from the [ULineBreakTag enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the break.
+`tag` has values from the [ULineBreakTag enum][ubrk_source] defined in ubrk.h indicating the nature of the break.
 The current values are:
 
     UBRK_LINE_SOFT      = 0,
@@ -460,7 +460,7 @@ Example:
 Split the string into sentences, according the Unicode text segmentation
 rules defined in [UAX #29](https://unicode.org/reports/tr29/),
 and return them in a set of (tag, contents) tuples.
-`tag` has values from the [USentenceBreakTag enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the break.
+`tag` has values from the [USentenceBreakTag enum][ubrk_source] defined in ubrk.h indicating the nature of the break.
 The current values are:
 
     UBRK_SENTENCE_TERM  = 0,
@@ -572,11 +572,11 @@ Example:
 ### icu_transform (`string` text, `transformations` text)
 
 Return a string with some transformations applied. This function essentially calls
-ICU's [utrans_transUChars()](http://icu-project.org/apiref/icu4c/utrans_8h.html#af415d8aa51e79d4494ebb8ef8fc76ae2).
+ICU's [utrans_transUChars()](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/utrans_8h.html#ad71dddd14877497f386b727d152ee89a).
 
 The first argument is the string to transform, and the second is the transformation
 to apply, expressed as a sequence of transforms and filters
-(see the [ICU user guide on transforms](http://userguide.icu-project.org/transforms/general)
+(see the [ICU user guide on transforms](https://unicode-org.github.io/icu/userguide/transforms/general/)
 and the output of `icu_transforms_list()` mentioned below).
 
 Examples:
@@ -617,7 +617,7 @@ Generate hexadecimal codepoints for non-ASCII characters:
 ### icu_transforms_list ()
 
 Return the list of built-in transliterations or transforms, as a set of text,
-corresponding to "Basic IDs" in [ICU documentation](http://userguide.icu-project.org/transforms/general).
+corresponding to "Basic IDs" in [ICU documentation](https://unicode-org.github.io/icu/userguide/transforms/general).
 The initial set of transforms are transliterations between scripts
 (like `Katakana-Latin` or `Latin-Cyrillic`), but they're
 supplemented with functionalities related to accents, casing,
@@ -725,3 +725,5 @@ Example:
 ## License
 
 This project is licensed under the PostgreSQL License -- see [LICENSE.md](LICENSE.md).
+
+[ubrk_source]: https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ubrk_8h_source.html
