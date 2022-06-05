@@ -180,6 +180,8 @@ icu_parse_date(const text *input_date,
 		elog(ERROR, "udat_open failed: %s\n", u_errorName(status));
 	}
 
+	udat_setLenient(df, false);	/* strict parsing */
+
 	udat = udat_parse(df,
 					   u_date_string,
 					   u_date_length,
@@ -359,15 +361,18 @@ icu_date_in(PG_FUNCTION_ARGS)
 		elog(ERROR, "udat_open failed: %s\n", u_errorName(status));
 	}
 
-	udat = udat_parse(df,
-					   u_date_string,
-					   u_date_length,
-					   &parse_pos,
-					   &status);
-	udat_close(df);
+	udat_setLenient(df, false);	/* strict parsing */
 
+	udat = udat_parse(df,
+					  u_date_string,
+					  u_date_length,
+					  &parse_pos,
+					  &status);
+	udat_close(df);
+/*
 	elog(DEBUG1, "udat_parse('%s'[%d], '%s' ) => %f, parse_pos=%d",
 		 date_string, u_strlen(u_date_string), icu_ext_date_format, udat, parse_pos);
+*/
 
 	if (U_FAILURE(status))
 		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
