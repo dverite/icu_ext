@@ -24,6 +24,7 @@ Build and install with:
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
 [icu_confusable_strings_check](#icu_confusable_strings_check)  
+[icu_confusable_string_skeleton](#icu_confusable_string_skeleton)  
 [icu_default_locale](#icu_default_locale)  
 [icu_is_normalized](#icu_is_normalized)  
 [icu_line_boundaries](#icu_line_boundaries)  
@@ -567,6 +568,28 @@ Example:
      phiI | t
      phi1 | t
      phıl | t
+
+
+<a id="icu_confusable_string_skeleton"></a>
+### icu_confusable_string_skeleton(`string` text)
+
+Return the skeleton transformation of the input string as specified in
+the [Unicode Technical Report #39](https://unicode.org/reports/tr39/#def-skeleton).
+Two strings are visually confusable if they produce the same skeleton.
+
+Example:
+
+    =# SELECT txt, icu_confusable_string_skeleton(txt) AS skeleton
+        FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l'), (E'\u2026\u2026')) AS s(txt);
+
+     txt  | skeleton
+    ------+----------
+     phiL | phiL
+     phiI | phil
+     phi1 | phil
+     phıl | phil
+     ……   | ......
+
 
 <a id="icu_transform"></a>
 ### icu_transform (`string` text, `transformations` text)
