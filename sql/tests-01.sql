@@ -26,6 +26,10 @@ SELECT icu_compare('Abcé', 'abce' COLLATE "en-x-icu");
 SELECT txt, icu_confusable_strings_check('phil', txt) AS confusable
     FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l')) AS s(txt);
 
+-- icu_confusable_string_skeleton
+SELECT txt, icu_confusable_string_skeleton(txt) AS skeleton
+    FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l'), (E'\u2026\u2026')) AS s(txt);
+
 -- icu_line_boundaries
 SELECT *,convert_to( contents, 'utf-8')
 FROM icu_line_boundaries(

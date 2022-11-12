@@ -73,6 +73,18 @@ SELECT txt, icu_confusable_strings_check('phil', txt) AS confusable
  phıl | t
 (4 rows)
 
+-- icu_confusable_string_skeleton
+SELECT txt, icu_confusable_string_skeleton(txt) AS skeleton
+    FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l'), (E'\u2026\u2026')) AS s(txt);
+ txt  | skeleton 
+------+----------
+ phiL | phiL
+ phiI | phil
+ phi1 | phil
+ phıl | phil
+ ……   | ......
+(5 rows)
+
 -- icu_line_boundaries
 SELECT *,convert_to( contents, 'utf-8')
 FROM icu_line_boundaries(
