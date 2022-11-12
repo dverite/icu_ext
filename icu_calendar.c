@@ -243,6 +243,9 @@ add_interval(TimestampTz ts, Interval *ival, const char *locale)
 	if (ival->day != 0)
 		ucal_add(ucal, UCAL_DAY_OF_MONTH, ival->day, &status);
 
+	if (ival->time != 0)
+		ucal_add(ucal, UCAL_MILLISECOND, ival->time/1000, &status);
+
 	/* Translate back to a UDate, and then to a postgres timestamptz */
 	date_time = ucal_getMillis(ucal, &status);
 	ucal_close(ucal);
