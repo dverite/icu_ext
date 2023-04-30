@@ -68,7 +68,7 @@ static UTransliterator *utrans = NULL;
 static char *cached_utrans_id = NULL;
 
 /*
- * Main function to apply a tranformation based on UTransliterator.
+ * Main function to apply a transformation based on UTransliterator.
  * Input:
  * 1st arg: string to transform
  * 2nd arg: name (system identifier) of the transliterator

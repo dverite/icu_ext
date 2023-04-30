@@ -155,5 +155,5 @@ icu_is_normalized(PG_FUNCTION_ARGS)
 	if (U_FAILURE(status))
 		elog(ERROR, "unorm2_isNormalized failure: %s", u_errorName(status));
 
-	PG_RETURN_BOOL(is_norm == TRUE);
+	PG_RETURN_BOOL(is_norm == 1);
 }
