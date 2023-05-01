@@ -763,7 +763,7 @@ Example:
 
 
 <a id="icu_parse_date"></a>
-### icu_parse_date(`text` input_string, `format` text [, `locale` text])
+### icu\_parse\_date(input_string `text`, `format` text [, `locale` text]`)
 
 Return a time stamp with time zone obtained by parsing the input string
 according to the `format` (described in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/)).

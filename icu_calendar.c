@@ -85,13 +85,22 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 	char *result;
 	int32_t result_len;
 
-
 	int32_t pattern_length;
 	UChar* pattern_buf;
 
 	UDateFormat* df = NULL;
-	UDate dat = ts_to_udate(pg_tstz);
+	UDate dat;
 
+	if (TIMESTAMP_NOT_FINITE(pg_tstz))
+	{
+		char buf[MAXDATELEN + 1];
+
+		EncodeSpecialTimestamp(pg_tstz, buf); /* produces [-]infinity */
+		result = pstrdup(buf);
+		PG_RETURN_TEXT_P(cstring_to_text(result));
+	}
+
+	dat = ts_to_udate(pg_tstz);
 	pattern_length = icu_to_uchar(&pattern_buf, icu_date_format, strlen(icu_date_format));
 
 	/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
@@ -107,9 +116,15 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 		elog(ERROR, "udat_open failed with code %d\n", status);
 
 	{
-		int32_t u_buffer_size = udat_format(df, dat, NULL, 0, NULL, &status);
+		/* Try first to convert into a buffer on the stack, and
+		   palloc() it only if udat_format says it's too small */
+		UChar local_buf[MAXDATELEN];
 
-		if(status == U_BUFFER_OVERFLOW_ERROR)
+		int32_t u_buffer_size = udat_format(df, dat,
+											local_buf, sizeof(local_buf)/sizeof(UChar),
+											NULL, &status);
+
+		if (status == U_BUFFER_OVERFLOW_ERROR)
 		{
 			UChar* u_buffer;
 			status = U_ZERO_ERROR;
@@ -119,8 +134,7 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 		}
 		else
 		{
-			result = "";
-			result_len= 0;
+			result_len = icu_from_uchar(&result, local_buf, u_buffer_size);
 		}
 	}
 	if (df)
@@ -417,7 +431,7 @@ icu_date_out(PG_FUNCTION_ARGS)
 	UDate udate;
 	const char *locale = NULL;
 	char *result;
-	
+
 	if (DATE_NOT_FINITE(date))
 	{
 		EncodeSpecialDate(date, buf);
@@ -454,8 +468,13 @@ icu_date_out(PG_FUNCTION_ARGS)
 		if (U_FAILURE(status))
 			elog(ERROR, "udat_open failed with code %d\n", status);
 		{
-			/* TODO: try first with a buffer of MAXDATELEN*sizeof(UChar) size */
-			int32_t u_buffer_size = udat_format(df, udate, NULL, 0, NULL, &status);
+			/* Try first to convert into a buffer on the stack, and
+			   palloc() it only if udat_format says it's too small */
+			UChar local_buf[MAXDATELEN];
+
+			int32_t u_buffer_size = udat_format(df, udate,
+												local_buf, sizeof(local_buf)/sizeof(UChar),
+												NULL, &status);
 
 			if(status == U_BUFFER_OVERFLOW_ERROR)
 			{
@@ -467,7 +486,7 @@ icu_date_out(PG_FUNCTION_ARGS)
 			}
 			else
 			{
-				result = pstrdup("");
+				icu_from_uchar(&result, local_buf, u_buffer_size);
 			}
 		}
 		if (df)

@@ -17,3 +17,5 @@ all:
 
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
+override CFLAGS += -g  # added with PG16 built with meson. Not sure it should be kept.
+
