@@ -16,8 +16,9 @@
 #include "miscadmin.h"
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
-#include "utils/tuplestore.h"
+#include "utils/guc.h"
 #include "utils/pg_locale.h"
+#include "utils/tuplestore.h"
 
 #include "unicode/ucnv.h"
 #include "unicode/ucol.h"
@@ -321,7 +322,6 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 
 	/* Reorder codes (key:kr) */
 	{
-		UErrorCode status = U_ZERO_ERROR;
 		StringInfoData aggr_values;  /* 4-letter codes separated by hyphens */
 		int32_t *reorder_codes = NULL;
 		int32_t nb_reorderings = ucol_getReorderCodes(collator,

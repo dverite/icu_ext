@@ -12,6 +12,9 @@
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"
+#if PG_VERSION_NUM >= 160000
+#include "varatt.h"
+#endif
 
 /* ICU includes */
 #include "unicode/unorm.h"
