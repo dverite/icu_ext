@@ -1,5 +1,5 @@
 -- complain if script is sourced in psql, rather than via CREATE/ALTER EXTENSION
-\echo Use "ALTER EXTENSION icu_ext UPDATE TO '1.7'" to load this file. \quit
+\echo Use "ALTER EXTENSION icu_ext UPDATE TO '1.8'" to load this file. \quit
 
 /* Interface to udat_parse().
    The calendar is typically set in the locale argument. */

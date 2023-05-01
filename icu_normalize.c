@@ -4,7 +4,7 @@
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
  *
- * By Daniel Vérité, 2018-2020. See LICENSE.md
+ * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
 /* Postgres includes */
@@ -12,6 +12,9 @@
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"
+#if PG_VERSION_NUM >= 160000
+#include "varatt.h"
+#endif
 
 /* ICU includes */
 #include "unicode/unorm.h"
