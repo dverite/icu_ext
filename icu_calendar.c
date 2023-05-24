@@ -4,7 +4,7 @@
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
  *
- * By Daniel Vérité, 2018-2022. See LICENSE.md
+ * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
 /* Postgres includes */
@@ -19,7 +19,6 @@
 
 /* ICU includes */
 #include "unicode/ucal.h"
-#include "unicode/ucnv.h"  /* needed? */
 #include "unicode/udat.h"
 #include "unicode/ustring.h"
 
@@ -30,10 +29,6 @@ PG_FUNCTION_INFO_V1(icu_format_date_locale);
 PG_FUNCTION_INFO_V1(icu_format_date_default_locale);
 PG_FUNCTION_INFO_V1(icu_parse_date_locale);
 PG_FUNCTION_INFO_V1(icu_parse_date_default_locale);
-PG_FUNCTION_INFO_V1(icu_add_interval);
-PG_FUNCTION_INFO_V1(icu_add_interval_default_locale);
-PG_FUNCTION_INFO_V1(icu_diff_timestamps);
-PG_FUNCTION_INFO_V1(icu_diff_timestamps_default_locale);
 PG_FUNCTION_INFO_V1(icu_date_in);
 PG_FUNCTION_INFO_V1(icu_date_out);
 
@@ -226,100 +221,6 @@ icu_parse_date_default_locale(PG_FUNCTION_ARGS)
 						  NULL);
 }
 
-/*
- * Add an interval to a timestamp with timezone, given a localized calendar.
- * if locale==NULL, use the current ICU locale.
- */
-static
-Datum
-add_interval(TimestampTz ts, Interval *ival, const char *locale)
-{
-	UErrorCode status = U_ZERO_ERROR;
-	UDate date_time = ts_to_udate(ts);
-	UCalendar *ucal;
-
-	ucal = ucal_open(NULL, /* default zoneID */
-					 0,
-					 locale,
-					 UCAL_DEFAULT,
-					 &status);
-	if (U_FAILURE(status))
-	{
-		elog(ERROR, "ucal_open failed: %s\n", u_errorName(status));
-	}
-
-	ucal_setMillis(ucal, date_time, &status);
-
-	/* Add months and days, with the rules of the given calendar */
-	if (ival->month != 0)
-		ucal_add(ucal, UCAL_MONTH, ival->month, &status);
-
-	if (ival->day != 0)
-		ucal_add(ucal, UCAL_DAY_OF_MONTH, ival->day, &status);
-
-	if (ival->time != 0)
-		ucal_add(ucal, UCAL_MILLISECOND, ival->time/1000, &status);
-
-	/* Translate back to a UDate, and then to a postgres timestamptz */
-	date_time = ucal_getMillis(ucal, &status);
-	ucal_close(ucal);
-
-	if (U_FAILURE(status))
-	{
-		elog(ERROR, "calendar translation failed: %s\n", u_errorName(status));
-	}
-
-	PG_RETURN_TIMESTAMPTZ(udate_to_ts(date_time));
-}
-
-Datum
-icu_add_interval(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
-	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
-	const char *locale = text_to_cstring(PG_GETARG_TEXT_PP(2));
-
-	return add_interval(pg_tstz, pg_interval, locale);
-}
-
-Datum
-icu_add_interval_default_locale(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
-	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
-
-	return add_interval(pg_tstz, pg_interval, NULL);
-}
-
-Datum
-icu_diff_timestamps(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
-	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
-	/*
-	  delta interval,
-	  locale text
-	*/
-	long diff = TimestampDifferenceMilliseconds(pg_tstz1, pg_tstz2);
-	Interval *interv = (Interval*)palloc0(sizeof(Interval));
-	interv->time = diff*1000;	/* TimeOffset has units of microseconds */
-	/*
-	  fsec_t fsec = 0;
-	  tm2interval(&tm, fsec, &interv);
-	*/
-	PG_RETURN_INTERVAL_P(interv);
-}
-
-Datum
-icu_diff_timestamps_default_locale(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
-	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
-
-	Interval *interv = (Interval*)palloc0(sizeof(Interval));
-	interv->time = pg_tstz2 - pg_tstz1;	/* TimeOffset has units of microseconds */
-	PG_RETURN_INTERVAL_P(interv);
-}
 
 /*
  * Input function for text representation of icu_date.

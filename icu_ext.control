@@ -1,5 +1,5 @@
 # icu_ext extension
 comment = 'Access ICU functions'
-default_version = '1.8.0'
+default_version = '1.8'
 module_pathname = '$libdir/icu_ext'
 relocatable = true
