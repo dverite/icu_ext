@@ -33,7 +33,7 @@ ICU date and time functionalities are exposed in two ways:
 
 1. through functions like `icu_parse_date` and `icu_format_date`. Besides the date or time value and the format strings, these functions take an optional ICU locale argument which may specify a calendar, for instance `fr@calendar=buddhist`.
 
-1. through the data types `icu_date`, `icu_timestamp`, and `icu_interval`, and the settings `icu_ext.date_format`, `icu_ext.timestamptz_format`, `icu_ext.locale`.
+1. through the data types `icu_date`, `icu_timestamptz`, and `icu_interval`, and the settings `icu_ext.date_format`, `icu_ext.timestamptz_format`, `icu_ext.locale`.
 Again the calendar can be specified in the locale.
 
 ## Functions
@@ -50,11 +50,11 @@ To express non-finite dates, use: `'infinity'::date::icu_date`.
 Internally, the representation is the same as the `date` type, and `icu_date` can be cast directly to and from `date`.
 
 
-### icu_timestamp
-It differs only from the core built-in type `timestamptz` (also called `timestamp with time zone`) in the input and output formats that are accepted. The text representation for `icu_timestamp` works with respect to `icu_ext.timestamp_format` if set, and otherwise with the default format of the current ICU locale.
-To express non-finite timestamps, use: `'infinity'::timestamptz::icu_timestamp`.
+### icu_timestamptz
+It differs only from the core built-in type `timestamptz` (also called `timestamp with time zone`) in the input and output formats that are accepted. The text representation for `icu_timestamptz` works with respect to `icu_ext.timestamp_format` if set, and otherwise with the default format of the current ICU locale.
+To express non-finite timestamps, use: `'infinity'::timestamptz::icu_timestamptz`.
 
-Internally, the representation if the same as the `timestamptz` type, and `icu_timestamp` can be cast directly to and from `timestamptz`.
+Internally, the representation if the same as the `timestamptz` type, and `icu_timestamptz` can be cast directly to and from `timestamptz`.
 
 ### icu_interval
 

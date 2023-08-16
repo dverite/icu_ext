@@ -28,8 +28,8 @@
 
 PG_FUNCTION_INFO_V1(icu_diff_timestamps);
 PG_FUNCTION_INFO_V1(icu_diff_timestamps_default_locale);
-PG_FUNCTION_INFO_V1(icu_timestamp_in);
-PG_FUNCTION_INFO_V1(icu_timestamp_out);
+PG_FUNCTION_INFO_V1(icu_timestamptz_in);
+PG_FUNCTION_INFO_V1(icu_timestamptz_out);
 
 
 Datum
@@ -98,11 +98,11 @@ udate_to_ts(const UDate ud)
 }
 #endif
 
-/* icu_timestamp_out()
+/* icu_timestamptz_out()
  * Convert a timestamp to external form.
  */
 Datum
-icu_timestamp_out(PG_FUNCTION_ARGS)
+icu_timestamptz_out(PG_FUNCTION_ARGS)
 {
 	TimestampTz dt = PG_GETARG_TIMESTAMPTZ(0);
 	char	   *result;
@@ -190,12 +190,13 @@ icu_timestamp_out(PG_FUNCTION_ARGS)
 
 }
 
-/* icu_timestamp_in()
+/* icu_timestamptz_in()
  * Convert a string to internal form.
+ * Interim implementation
  * TODO: use the ICU parser
  */
 Datum
-icu_timestamp_in(PG_FUNCTION_ARGS)
+icu_timestamptz_in(PG_FUNCTION_ARGS)
 {
 	char	   *str = PG_GETARG_CSTRING(0);
 
@@ -269,7 +270,3 @@ icu_timestamp_in(PG_FUNCTION_ARGS)
 #endif
 	PG_RETURN_TIMESTAMPTZ(result);
 }
-
-/*
-TODO: accept an ICU timestamptz in icu_timestamp_in
-*/

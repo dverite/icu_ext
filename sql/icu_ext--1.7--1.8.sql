@@ -200,105 +200,105 @@ CREATE CAST (date AS icu_date) WITHOUT FUNCTION AS IMPLICIT;
 
 
 ---
---- icu_timestamp datatype
+--- icu_timestamptz datatype
 ---
-CREATE OR REPLACE FUNCTION icu_timestamp_in(cstring)
-RETURNS icu_timestamp
-AS 'MODULE_PATHNAME', 'icu_timestamp_in'
+CREATE OR REPLACE FUNCTION icu_timestamptz_in(cstring)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_timestamptz_in'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION icu_timestamp_out(icu_timestamp)
+CREATE OR REPLACE FUNCTION icu_timestamptz_out(icu_timestamptz)
 RETURNS cstring
-AS 'MODULE_PATHNAME', 'icu_timestamp_out'
+AS 'MODULE_PATHNAME', 'icu_timestamptz_out'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
-CREATE TYPE icu_timestamp (
- INPUT = icu_timestamp_in,
- OUTPUT = icu_timestamp_out,
+CREATE TYPE icu_timestamptz (
+ INPUT = icu_timestamptz_in,
+ OUTPUT = icu_timestamptz_out,
  LIKE = pg_catalog.timestamptz
 );
 
-CREATE FUNCTION icu_timestamp_eq (icu_timestamp, icu_timestamp) RETURNS bool
+CREATE FUNCTION icu_timestamptz_eq (icu_timestamptz, icu_timestamptz) RETURNS bool
 LANGUAGE internal AS 'timestamp_eq' IMMUTABLE STRICT;
 
-CREATE FUNCTION icu_timestamp_ne (icu_timestamp, icu_timestamp) RETURNS bool
+CREATE FUNCTION icu_timestamptz_ne (icu_timestamptz, icu_timestamptz) RETURNS bool
 LANGUAGE internal AS 'timestamp_ne' IMMUTABLE STRICT;
 
-CREATE FUNCTION icu_timestamp_gt (icu_timestamp, icu_timestamp) RETURNS bool
+CREATE FUNCTION icu_timestamptz_gt (icu_timestamptz, icu_timestamptz) RETURNS bool
 LANGUAGE internal AS 'timestamp_gt' IMMUTABLE STRICT;
 
-CREATE FUNCTION icu_timestamp_ge (icu_timestamp, icu_timestamp) RETURNS bool
+CREATE FUNCTION icu_timestamptz_ge (icu_timestamptz, icu_timestamptz) RETURNS bool
 LANGUAGE internal AS 'timestamp_ge' IMMUTABLE STRICT;
 
-CREATE FUNCTION icu_timestamp_lt (icu_timestamp, icu_timestamp) RETURNS bool
+CREATE FUNCTION icu_timestamptz_lt (icu_timestamptz, icu_timestamptz) RETURNS bool
 LANGUAGE internal AS 'timestamp_lt' IMMUTABLE STRICT;
 
-CREATE FUNCTION icu_timestamp_le (icu_timestamp, icu_timestamp) RETURNS bool
+CREATE FUNCTION icu_timestamptz_le (icu_timestamptz, icu_timestamptz) RETURNS bool
 LANGUAGE internal AS 'timestamp_le' IMMUTABLE STRICT;
 
-CREATE FUNCTION icu_timestamp_cmp (icu_timestamp, icu_timestamp) RETURNS int4
+CREATE FUNCTION icu_timestamptz_cmp (icu_timestamptz, icu_timestamptz) RETURNS int4
 LANGUAGE internal AS 'timestamp_cmp' IMMUTABLE STRICT;
 
 CREATE OPERATOR = (
- PROCEDURE = icu_timestamp_eq,
- LEFTARG = icu_timestamp,
- RIGHTARG = icu_timestamp,
+ PROCEDURE = icu_timestamptz_eq,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_timestamptz,
  NEGATOR = '<>',
  HASHES, MERGES
 );
 
 CREATE OPERATOR <> (
- PROCEDURE = icu_timestamp_ne,
- LEFTARG = icu_timestamp,
- RIGHTARG = icu_timestamp,
+ PROCEDURE = icu_timestamptz_ne,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_timestamptz,
  NEGATOR = '=',
  HASHES, MERGES
 );
 
 CREATE OPERATOR > (
- PROCEDURE = icu_timestamp_gt,
- LEFTARG = icu_timestamp,
- RIGHTARG = icu_timestamp,
+ PROCEDURE = icu_timestamptz_gt,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_timestamptz,
  NEGATOR = '=',
  HASHES, MERGES
 );
 
 CREATE OPERATOR >= (
- PROCEDURE = icu_timestamp_ge,
- LEFTARG = icu_timestamp,
- RIGHTARG = icu_timestamp,
+ PROCEDURE = icu_timestamptz_ge,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_timestamptz,
  NEGATOR = '=',
  HASHES, MERGES
 );
 
 CREATE OPERATOR < (
- PROCEDURE = icu_timestamp_lt,
- LEFTARG = icu_timestamp,
- RIGHTARG = icu_timestamp,
+ PROCEDURE = icu_timestamptz_lt,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_timestamptz,
  NEGATOR = '=',
  HASHES, MERGES
 );
 
 CREATE OPERATOR <= (
- PROCEDURE = icu_timestamp_le,
- LEFTARG = icu_timestamp,
- RIGHTARG = icu_timestamp,
+ PROCEDURE = icu_timestamptz_le,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_timestamptz,
  NEGATOR = '=',
  HASHES, MERGES
 );
 
-CREATE OPERATOR CLASS icu_timestamp_ops
-DEFAULT FOR TYPE icu_timestamp
+CREATE OPERATOR CLASS icu_timestamptz_ops
+DEFAULT FOR TYPE icu_timestamptz
 USING btree AS
 OPERATOR 1 <,
 OPERATOR 2 <=,
 OPERATOR 3 =,
 OPERATOR 4 >=,
 OPERATOR 5 >,
-FUNCTION 1 icu_timestamp_cmp(icu_timestamp, icu_timestamp);
+FUNCTION 1 icu_timestamptz_cmp(icu_timestamptz, icu_timestamptz);
 
-CREATE CAST (icu_timestamp AS timestamptz) WITHOUT FUNCTION AS IMPLICIT;
-CREATE CAST (timestamptz AS icu_timestamp) WITHOUT FUNCTION AS IMPLICIT;
+CREATE CAST (icu_timestamptz AS timestamptz) WITHOUT FUNCTION AS IMPLICIT;
+CREATE CAST (timestamptz AS icu_timestamptz) WITHOUT FUNCTION AS IMPLICIT;
 
 
 --
