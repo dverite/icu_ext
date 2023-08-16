@@ -40,7 +40,29 @@ Again the calendar can be specified in the locale.
 
 ### icu_parse_date
 
+Return a time stamp with time zone obtained by parsing the input string
+according to `format`. (described in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/)).
+The function should error out if the input string interpreted with the
+given `format` and `locale` cannot be converted into a time stamp.
+When `locale` is not specified, the current ICU locale is used.
+
 ### icu_format_date
+Return the string representing the time stamp `ts`with the given `format`
+and `locale`. The locale may include a calendar specification (`@calendar=name-of-calendar`)
+The format is explained in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/) (ICU documentation).
+If `locale` is not specified, the current ICU locale is used.
+
+
+Example:
+
+    =# SELECT icu_format_date(now(),
+	                         'GGGG dd/MMMM/yyyy HH:mm:ss.SSS z',
+	                         'fr@calendar=buddhist');
+							 
+					icu_format_date                 
+	------------------------------------------------
+	 ère bouddhique 26/mars/2564 13:48:05.917 UTC+1
+
 
 ## Types
 ### icu_date
