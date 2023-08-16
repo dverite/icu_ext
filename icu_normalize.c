@@ -4,7 +4,7 @@
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
  *
- * By Daniel Vérité, 2018-2020. See LICENSE.md
+ * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
 /* Postgres includes */
@@ -12,6 +12,9 @@
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"
+#if PG_VERSION_NUM >= 160000
+#include "varatt.h"
+#endif
 
 /* ICU includes */
 #include "unicode/unorm.h"
@@ -155,5 +158,5 @@ icu_is_normalized(PG_FUNCTION_ARGS)
 	if (U_FAILURE(status))
 		elog(ERROR, "unorm2_isNormalized failure: %s", u_errorName(status));
 
-	PG_RETURN_BOOL(is_norm == TRUE);
+	PG_RETURN_BOOL(is_norm == 1);
 }

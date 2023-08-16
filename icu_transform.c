@@ -4,7 +4,7 @@
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
  *
- * By Daniel Vérité, 2018-2020. See LICENSE.md
+ * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
 #include "postgres.h"
@@ -68,7 +68,7 @@ static UTransliterator *utrans = NULL;
 static char *cached_utrans_id = NULL;
 
 /*
- * Main function to apply a tranformation based on UTransliterator.
+ * Main function to apply a transformation based on UTransliterator.
  * Input:
  * 1st arg: string to transform
  * 2nd arg: name (system identifier) of the transliterator

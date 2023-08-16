@@ -1,6 +1,6 @@
 # icu_ext
 
-An extension to expose functionality from [ICU](http://icu-project.org) to PostgreSQL applications.
+An extension to expose functionality from [ICU](https://icu.unicode.org/) to PostgreSQL applications.
 
 It requires PostgreSQL version 10 or newer, configured with ICU
 (--with-icu).
@@ -24,6 +24,7 @@ Build and install with:
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
 [icu_confusable_strings_check](#icu_confusable_strings_check)  
+[icu_confusable_string_skeleton](#icu_confusable_string_skeleton)  
 [icu_default_locale](#icu_default_locale)  
 [icu_format_date](#icu_format_date)  
 [icu_is_normalized](#icu_is_normalized)  
@@ -97,9 +98,9 @@ PostgreSQL (found in `pg_collation`).
 Lists the attributes, version and display name of an ICU collation,
 returned as a set of `(attribute,value)` tuples.  The `collator`
 argument must designate an
-[ICU collator](http://userguide.icu-project.org/collation/api) and accepts
+[ICU collator](https://unicode-org.github.io/icu/userguide/collation/api) and accepts
 several different syntaxes. In particular, 
-a [locale ID](http://userguide.icu-project.org/locale) or (if ICU>=54)
+a [locale ID](https://unicode-org.github.io/icu/userguide/locale) or (if ICU>=54)
 [language tags](https://unicode.org/reports/tr35/tr35-collation.html#Collation_Settings)
 may be used.
 Note that this argument is **not** a reference to a PostgreSQL collation, and
@@ -176,7 +177,7 @@ a collator with the given argument.
 
 Returns the binary sort key (type: `bytea`) corresponding to the
 string with the given collation.
-See http://userguide.icu-project.org/collation/architecture#TOC-Sort-Keys
+See https://unicode-org.github.io/icu/userguide/collation/architecture#sort-keys
 
 When a `collator` argument is passed, it is interpreted as an ICU
 locale independently of the persistent collations instantiated in
@@ -332,7 +333,7 @@ rendered as an accented e or differently depending on your browser):
      é
 
 See [Boundary
-Analysis](http://userguide.icu-project.org/boundaryanalysis) in the
+Analysis](https://unicode-org.github.io/icu/userguide/boundaryanalysis/) in the
 ICU User Guide and [UAX #29 (Unicode Text Segmentation)](https://unicode.org/reports/tr29/)
 for more information.
 
@@ -341,7 +342,7 @@ for more information.
 
 Break down the string into words and non-words constituents,
 and return them in a set of (tag, contents) tuples.
-`tag` has values from the [UWordBreak enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the piece of contents.
+`tag` has values from the [UWordBreak enum][ubrk_source] defined in ubrk.h indicating the nature of the piece of contents.
 The current values are:
 
     UBRK_WORD_NONE           = 0,
@@ -395,7 +396,7 @@ or to count words in english:
 Split the string into pieces where a line break may occur, according
 to the Unicode line breaking algorithm defined in [UAX #14](https://unicode.org/reports/tr14/),
 and return them in a set of (tag, contents) tuples.
-`tag` has values from the [ULineBreakTag enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the break.
+`tag` has values from the [ULineBreakTag enum][ubrk_source] defined in ubrk.h indicating the nature of the break.
 The current values are:
 
     UBRK_LINE_SOFT      = 0,
@@ -462,7 +463,7 @@ Example:
 Split the string into sentences, according the Unicode text segmentation
 rules defined in [UAX #29](https://unicode.org/reports/tr29/),
 and return them in a set of (tag, contents) tuples.
-`tag` has values from the [USentenceBreakTag enum](http://icu-project.org/apiref/icu4c/ubrk_8h_source.html) defined in ubrk.h indicating the nature of the break.
+`tag` has values from the [USentenceBreakTag enum][ubrk_source] defined in ubrk.h indicating the nature of the break.
 The current values are:
 
     UBRK_SENTENCE_TERM  = 0,
@@ -570,15 +571,37 @@ Example:
      phi1 | t
      phıl | t
 
+
+<a id="icu_confusable_string_skeleton"></a>
+### icu_confusable_string_skeleton(`string` text)
+
+Return the skeleton transformation of the input string as specified in
+the [Unicode Technical Report #39](https://unicode.org/reports/tr39/#def-skeleton).
+Two strings are visually confusable if they produce the same skeleton.
+
+Example:
+
+    =# SELECT txt, icu_confusable_string_skeleton(txt) AS skeleton
+        FROM (VALUES ('phiL'), ('phiI'), ('phi1'), (E'ph\u0131l'), (E'\u2026\u2026')) AS s(txt);
+
+     txt  | skeleton
+    ------+----------
+     phiL | phiL
+     phiI | phil
+     phi1 | phil
+     phıl | phil
+     ……   | ......
+
+
 <a id="icu_transform"></a>
 ### icu_transform (`string` text, `transformations` text)
 
 Return a string with some transformations applied. This function essentially calls
-ICU's [utrans_transUChars()](http://icu-project.org/apiref/icu4c/utrans_8h.html#af415d8aa51e79d4494ebb8ef8fc76ae2).
+ICU's [utrans_transUChars()](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/utrans_8h.html#ad71dddd14877497f386b727d152ee89a).
 
 The first argument is the string to transform, and the second is the transformation
 to apply, expressed as a sequence of transforms and filters
-(see the [ICU user guide on transforms](http://userguide.icu-project.org/transforms/general)
+(see the [ICU user guide on transforms](https://unicode-org.github.io/icu/userguide/transforms/general/)
 and the output of `icu_transforms_list()` mentioned below).
 
 Examples:
@@ -619,7 +642,7 @@ Generate hexadecimal codepoints for non-ASCII characters:
 ### icu_transforms_list ()
 
 Return the list of built-in transliterations or transforms, as a set of text,
-corresponding to "Basic IDs" in [ICU documentation](http://userguide.icu-project.org/transforms/general).
+corresponding to "Basic IDs" in [ICU documentation](https://unicode-org.github.io/icu/userguide/transforms/general).
 The initial set of transforms are transliterations between scripts
 (like `Katakana-Latin` or `Latin-Cyrillic`), but they're
 supplemented with functionalities related to accents, casing,
@@ -726,52 +749,17 @@ Example:
 ### icu_format_date(`ts` timestamptz, `format` text [, `locale` text])
 
 Return the string representing the time stamp `ts`with the given `format`
-and `locale`. The locale may include a calendar specification (`@calendar=name-of-calendar`)
-The format is explained in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/) (ICU documentation).
-If `locale` is not specified, the current ICU locale is used.
-
-The calendar names that are recognized as of ICU 68 are:
-
-* buddhist
-* chinese
-* coptic
-* dangi
-* ethiopic
-* ethiopic-amete-alem
-* gregorian
-* hebrew
-* indian
-* islamic
-* islamic-civil
-* islamic-rgsa
-* islamic-tbla
-* islamic-umalqura
-* iso8601
-* japanese
-* persian
-* roc
-
-Example:
-
-    =# SELECT icu_format_date(now(),
-	                         'GGGG dd/MMMM/yyyy HH:mm:ss.SSS z',
-	                         'fr@calendar=buddhist');
-							 
-					icu_format_date                 
-	------------------------------------------------
-	 ère bouddhique 26/mars/2564 13:48:05.917 UTC+1
-
+and `locale`. The locale may include a calendar specification (`@calendar=name-of-calendar`). See README-datetime.md for more.
 
 <a id="icu_parse_date"></a>
-### icu_parse_date(`text` input_string, `format` text [, `locale` text])
+### icu\_parse\_date(input_string `text`, `format` text [, `locale` text]`)
 
 Return a time stamp with time zone obtained by parsing the input string
-according to the `format` (described in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/)).
-The function should error out if the input string interpreted with the
-given `format` and `locale` cannot be converted into a time stamp.
-When `locale` is not specified, the current ICU locale is used.
+according to `format`. See README-datetime.md for more.
 
 
 ## License
 
 This project is licensed under the PostgreSQL License -- see [LICENSE.md](LICENSE.md).
+
+[ubrk_source]: https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ubrk_8h_source.html

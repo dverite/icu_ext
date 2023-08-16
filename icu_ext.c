@@ -4,7 +4,7 @@
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
  *
- * By Daniel Vérité, 2018-2020. See LICENSE.md
+ * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
 #include "postgres.h"
@@ -16,8 +16,9 @@
 #include "miscadmin.h"
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
-#include "utils/tuplestore.h"
+#include "utils/guc.h"
 #include "utils/pg_locale.h"
+#include "utils/tuplestore.h"
 
 #include "unicode/ucnv.h"
 #include "unicode/ucol.h"
@@ -45,6 +46,15 @@ PG_FUNCTION_INFO_V1(icu_sort_key);
 PG_FUNCTION_INFO_V1(icu_sort_key_coll);
 PG_FUNCTION_INFO_V1(icu_char_name);
 
+
+/*
+ * GUC parameters
+ */
+char *icu_ext_default_locale;
+char *icu_ext_date_format;
+char *icu_ext_timestamp_format;
+
+void		_PG_init(void);
 
 Datum
 icu_version(PG_FUNCTION_ARGS)
@@ -321,7 +331,6 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 
 	/* Reorder codes (key:kr) */
 	{
-		UErrorCode status = U_ZERO_ERROR;
 		StringInfoData aggr_values;  /* 4-letter codes separated by hyphens */
 		int32_t *reorder_codes = NULL;
 		int32_t nb_reorderings = ucol_getReorderCodes(collator,
@@ -884,4 +893,46 @@ icu_char_name(PG_FUNCTION_ARGS)
 		elog(ERROR, "u_charName failed: %s", u_errorName(status));
 	else
 		PG_RETURN_TEXT_P(cstring_to_text(buffer));
+}
+
+/*
+ * Module load callback
+ */
+void
+_PG_init(void)
+{
+	DefineCustomStringVariable("icu_ext.locale",
+							   "Sets the default locale to use by ICU functions.",
+							   NULL,
+							   &icu_ext_default_locale,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	DefineCustomStringVariable("icu_ext.date_format",
+							   "Sets the default input/output format for dates.",
+							   NULL,
+							   &icu_ext_date_format,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	DefineCustomStringVariable("icu_ext.timestamp_format",
+							   "Sets the default input/output format for timestamp values.",
+							   NULL,
+							   &icu_ext_timestamp_format,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	EmitWarningsOnPlaceholders("icu_ext");
 }
