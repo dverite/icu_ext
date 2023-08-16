@@ -11,6 +11,7 @@
 #include "postgres.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "pgtime.h"
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
 #include "utils/pg_locale.h"
@@ -124,6 +125,9 @@ icu_timestamp_out(PG_FUNCTION_ARGS)
 		const char *locale = NULL;
 		UChar *output_pattern = NULL;
 		int32_t pattern_length = -1;
+		UChar* tzid;
+		int32_t tzid_length;
+		const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
 
 		if (icu_ext_timestamp_format != NULL && icu_ext_timestamp_format[0] != '\0')
@@ -138,12 +142,16 @@ icu_timestamp_out(PG_FUNCTION_ARGS)
 			locale = icu_ext_default_locale;
 		}
 
+		tzid_length = icu_to_uchar(&tzid,
+								   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
+								   strlen(pg_tz_name));
+
 		/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
 		df = udat_open(output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* timeStyle */
 					   output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
 					   locale,		 /* NULL for the default locale */
-					   NULL,			/* tzID (NULL=default). */
-					   -1,			/* tzIDLength */
+					   tzid,			/* tzID (NULL=default). */
+					   tzid_length,		/* tzIDLength */
 					   output_pattern,		/* pattern */
 					   pattern_length,			/* patternLength */
 					   &status);
@@ -184,16 +192,17 @@ icu_timestamp_out(PG_FUNCTION_ARGS)
 
 /* icu_timestamp_in()
  * Convert a string to internal form.
+ * TODO: use the ICU parser
  */
 Datum
 icu_timestamp_in(PG_FUNCTION_ARGS)
 {
 	char	   *str = PG_GETARG_CSTRING(0);
+
 #ifdef NOT_USED
 	Oid			typelem = PG_GETARG_OID(1);
 #endif
 	int32		typmod = PG_GETARG_INT32(2);
-	Node	   *escontext = fcinfo->context;
 	TimestampTz result;
 	fsec_t		fsec;
 	struct pg_tm tt,
@@ -205,25 +214,32 @@ icu_timestamp_in(PG_FUNCTION_ARGS)
 	char	   *field[MAXDATEFIELDS];
 	int			ftype[MAXDATEFIELDS];
 	char		workbuf[MAXDATELEN + MAXDATEFIELDS];
+#if PG_VERSION_NUM >= 160000
+	Node	   *escontext = fcinfo->context;
 	DateTimeErrorExtra extra;
-
+#endif	
 	dterr = ParseDateTime(str, workbuf, sizeof(workbuf),
 						  field, ftype, MAXDATEFIELDS, &nf);
+#if PG_VERSION_NUM >= 160000
 	if (dterr == 0)
 		dterr = DecodeDateTime(field, ftype, nf,
 							   &dtype, tm, &fsec, &tz, &extra);
 	if (dterr != 0)
 	{
-		DateTimeParseError(dterr, &extra, str, "timestamp with time zone",
-						   escontext);
+		DateTimeParseError(dterr, &extra, str, "timestamp", escontext);
 		PG_RETURN_NULL();
-	}
-
+	}	
+#else
+	if (dterr == 0)
+		dterr = DecodeDateTime(field, ftype, nf, &dtype, tm, &fsec, &tz);
+	if (dterr != 0)
+		DateTimeParseError(dterr, str, "timestamp with time zone");
+#endif
 	switch (dtype)
 	{
 		case DTK_DATE:
 			if (tm2timestamp(tm, fsec, &tz, &result) != 0)
-				ereturn(escontext, (Datum) 0,
+				ereport(ERROR,
 						(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 						 errmsg("timestamp out of range: \"%s\"", str)));
 			break;
@@ -246,7 +262,14 @@ icu_timestamp_in(PG_FUNCTION_ARGS)
 			TIMESTAMP_NOEND(result);
 	}
 
+#if PG_VERSION_NUM >= 160000
 	AdjustTimestampForTypmod(&result, typmod, escontext);
-
+#else
+	AdjustTimestampForTypmod(&result, typmod);
+#endif
 	PG_RETURN_TIMESTAMPTZ(result);
 }
+
+/*
+TODO: accept an ICU timestamptz in icu_timestamp_in
+*/

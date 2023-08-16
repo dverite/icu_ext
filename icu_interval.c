@@ -1,5 +1,5 @@
 /*
- * icu_calendar.c
+ * icu_interval.c
  *
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
@@ -11,6 +11,7 @@
 #include "postgres.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
 #include "utils/pg_locale.h"
@@ -26,6 +27,22 @@
 PG_FUNCTION_INFO_V1(icu_add_interval);
 PG_FUNCTION_INFO_V1(icu_add_interval_default_locale);
 
+PG_FUNCTION_INFO_V1(icu_interval_in);
+PG_FUNCTION_INFO_V1(icu_interval_out);
+PG_FUNCTION_INFO_V1(icu_from_interval);
+
+/*
+ * icu_interval_t is like Interval except for the additional year
+ * field. Interval considers that 1 year = 12 months, whereas
+ * icu_interval_t does not.
+ */
+typedef struct {
+	TimeOffset	time;			/* all time units other than days, months and
+								 * years */
+	int32		day;			/* days, after time for alignment */
+	int32		month;			/* months, after time for alignment */
+	int32		year;			/* years */
+} icu_interval_t;
 
 /* Convert a Postgres timestamp into an ICU timestamp */
 static UDate
@@ -124,3 +141,138 @@ icu_add_interval_default_locale(PG_FUNCTION_ARGS)
 
 	return add_interval(pg_tstz, pg_interval, NULL);
 }
+
+Datum
+icu_interval_in(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *result;
+	char	   *str = PG_GETARG_CSTRING(0);
+	int32		typmod = PG_GETARG_INT32(2);
+	struct pg_itm_in tt,
+			   *itm_in = &tt;
+	int			dtype;
+	int			nf;
+	int			range;
+	int			dterr;
+	char	   *field[MAXDATEFIELDS];
+	int			ftype[MAXDATEFIELDS];
+	char		workbuf[256];
+#if PG_VERSION_NUM >= 160000
+	Node	   *escontext = fcinfo->context;
+	DateTimeErrorExtra extra;
+#endif
+
+	itm_in->tm_year = 0;
+	itm_in->tm_mon = 0;
+	itm_in->tm_mday = 0;
+	itm_in->tm_usec = 0;
+
+	if (typmod >= 0)
+		range = INTERVAL_RANGE(typmod);
+	else
+		range = INTERVAL_FULL_RANGE;
+
+	dterr = ParseDateTime(str, workbuf, sizeof(workbuf), field,
+						  ftype, MAXDATEFIELDS, &nf);
+	if (dterr == 0)
+		dterr = DecodeInterval(field, ftype, nf, range,
+							   &dtype, itm_in);
+
+	/* if those functions think it's a bad format, try ISO8601 style */
+	if (dterr == DTERR_BAD_FORMAT)
+		dterr = DecodeISO8601Interval(str,
+									  &dtype, itm_in);
+
+	if (dterr != 0)
+	{
+		if (dterr == DTERR_FIELD_OVERFLOW)
+			dterr = DTERR_INTERVAL_OVERFLOW;
+#if PG_VERSION_NUM >= 160000
+		DateTimeParseError(dterr, &extra, str, "interval", escontext);
+#else
+		DateTimeParseError(dterr, str, "interval");
+#endif
+		PG_RETURN_NULL();
+	}
+
+	result	= (icu_interval_t*) palloc(sizeof(icu_interval_t));
+
+	switch (dtype)
+	{
+		case DTK_DELTA:
+			/* do not call itmin2interval() to not merge years into months */
+			result->month = itm_in->tm_mon;
+			result->day = itm_in->tm_mday;
+			result->year = itm_in->tm_year;
+			result->time = itm_in->tm_usec;
+			break;
+
+		default:
+			elog(ERROR, "unexpected dtype %d while parsing interval \"%s\"",
+				 dtype, str);
+	}
+#if 0
+	// FIXME
+	AdjustIntervalForTypmod(result, typmod, escontext);
+#endif
+
+	return PointerGetDatum(result);
+}
+
+/*
+ * Text representation for icu_interval.
+ * It is essentially identical to "interval" except that 
+ * the year field is not months%12
+ */
+Datum
+icu_interval_out(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *itv = (icu_interval_t*)PG_GETARG_DATUM(0);
+	char buf[MAXDATELEN + 1];
+	struct pg_itm itm;
+	TimeOffset time, tfrac;
+
+	itm.tm_year = itv->year;
+	itm.tm_mon = itv->month;
+	itm.tm_mday = itv->day;
+
+	/* The following code is copied from interval2itm()
+	   in backend/utils/adt/timestamp.c */
+	time = itv->time;
+
+	tfrac = time / USECS_PER_HOUR;
+	time -= tfrac * USECS_PER_HOUR;
+	itm.tm_hour = tfrac;
+	tfrac = time / USECS_PER_MINUTE;
+	time -= tfrac * USECS_PER_MINUTE;
+	itm.tm_min = (int) tfrac;
+	tfrac = time / USECS_PER_SEC;
+	time -= tfrac * USECS_PER_SEC;
+	itm.tm_sec = (int) tfrac;
+	itm.tm_usec = (int) time;
+
+	EncodeInterval(&itm, IntervalStyle, buf);
+
+	PG_RETURN_CSTRING(pstrdup(buf));
+}
+
+Datum
+icu_from_interval(PG_FUNCTION_ARGS)
+{
+	Interval *pg_interval = PG_GETARG_INTERVAL_P(0);
+	icu_interval_t *interval = (icu_interval_t*) palloc(sizeof(icu_interval_t));
+	interval->time = pg_interval->time;
+	interval->day = pg_interval->day;
+	interval->month = pg_interval->month;
+	interval->year = 0;
+	return PointerGetDatum(interval);
+}
+
+/*
+TODO:
+- in, out with '<number>Y <number>M <number>D <number>h <number>m <number>s'
+- multiplication, as in '1M'::icu_interval * 4
+- binary
+- add to icu_timestamptz and icu_date
+- justify_interval?
+*/

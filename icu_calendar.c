@@ -11,6 +11,7 @@
 #include "postgres.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "pgtime.h"
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
 #include "utils/pg_locale.h"
@@ -85,6 +86,9 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 
 	UDateFormat* df = NULL;
 	UDate dat;
+	UChar* tzid;
+	int32_t tzid_length;
+	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
 	if (TIMESTAMP_NOT_FINITE(pg_tstz))
 	{
@@ -98,12 +102,16 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 	dat = ts_to_udate(pg_tstz);
 	pattern_length = icu_to_uchar(&pattern_buf, icu_date_format, strlen(icu_date_format));
 
+	tzid_length = icu_to_uchar(&tzid,
+							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
+							   strlen(pg_tz_name));
+
 	/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
 	df = udat_open(UDAT_PATTERN, /* timeStyle */
 				   UDAT_PATTERN, /* dateStyle */
 				   locale,		 /* NULL for the default locale */
-				   NULL,			/* tzID (NULL=default). FIXME  */
-				   -1,			/* tzIDLength */
+				   tzid,			/* tzID (NULL=default). */
+				   tzid_length,			/* tzIDLength */
 				   pattern_buf,
 				   pattern_length,
 				   &status);
@@ -245,6 +253,7 @@ icu_date_in(PG_FUNCTION_ARGS)
 	int32_t parse_pos = 0;
 	UChar* tzid;
 	int32_t tzid_length;
+	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 	
 	if (icu_ext_date_format != NULL && icu_ext_date_format[0] != '\0')
 	{
@@ -261,8 +270,8 @@ icu_date_in(PG_FUNCTION_ARGS)
 	}
 
 	tzid_length = icu_to_uchar(&tzid,
-							   UCAL_UNKNOWN_ZONE_ID, /* like GMT */
-							   strlen(UCAL_UNKNOWN_ZONE_ID));
+							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
+							   strlen(pg_tz_name));
 
 	/* if UDAT_PATTERN is used, we must pass it for both timeStyle and dateStyle */
 	df = udat_open(input_pattern ? UDAT_PATTERN : UDAT_NONE,	 /* timeStyle */
@@ -287,14 +296,9 @@ icu_date_in(PG_FUNCTION_ARGS)
 					  &parse_pos,
 					  &status);
 	udat_close(df);
-/*
-	elog(DEBUG1, "udat_parse('%s'[%d], '%s' ) => %f, parse_pos=%d",
-		 date_string, u_strlen(u_date_string), icu_ext_date_format, udat, parse_pos);
-*/
 
 	if (U_FAILURE(status))
 		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
-
 
 	/* convert UDate to julian days, with an intermediate Timestamp to use date2j */
 	pg_ts = udate_to_ts(udat);
@@ -332,6 +336,8 @@ icu_date_out(PG_FUNCTION_ARGS)
 	UDate udate;
 	const char *locale = NULL;
 	char *result;
+	UChar* tzid;
+	int32_t tzid_length;
 
 	if (DATE_NOT_FINITE(date))
 	{
@@ -357,12 +363,16 @@ icu_date_out(PG_FUNCTION_ARGS)
 			locale = icu_ext_default_locale;
 		}
 
+		/* dates are not time-zone shifted when output */
+		tzid_length = icu_to_uchar(&tzid,
+								   UCAL_UNKNOWN_ZONE_ID, /*like GMT */
+								   strlen(UCAL_UNKNOWN_ZONE_ID));
 		/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
 		df = udat_open(output_pattern ? UDAT_PATTERN : UDAT_NONE,	 /* timeStyle */
 					   output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
 					   locale,		 /* NULL for the default locale */
-					   NULL,			/* tzID (NULL=default). */
-					   -1,			/* tzIDLength */
+					   tzid,		 /* tzID (NULL=default). */
+					   tzid_length,			 /* tzIDLength */
 					   output_pattern,		/* pattern */
 					   pattern_length,			/* patternLength */
 					   &status);
@@ -395,6 +405,11 @@ icu_date_out(PG_FUNCTION_ARGS)
 	}
 	PG_RETURN_CSTRING(result);
 }
+/*
+TODO:
+- accept 'infinity'::icu_date (see if uppercase spaces before/after are tolerated)
+ or say that 'infinity'::date should be used
+*/
 
 /*
  GUC:

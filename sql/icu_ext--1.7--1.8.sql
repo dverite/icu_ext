@@ -300,3 +300,34 @@ FUNCTION 1 icu_timestamp_cmp(icu_timestamp, icu_timestamp);
 CREATE CAST (icu_timestamp AS timestamptz) WITHOUT FUNCTION AS IMPLICIT;
 CREATE CAST (timestamptz AS icu_timestamp) WITHOUT FUNCTION AS IMPLICIT;
 
+
+--
+-- icu_interval datatype
+---
+CREATE OR REPLACE FUNCTION icu_interval_in(cstring)
+RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_interval_in'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION icu_interval_out(icu_interval)
+RETURNS cstring
+AS 'MODULE_PATHNAME', 'icu_interval_out'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE TYPE icu_interval (
+ INPUT = icu_interval_in,
+ OUTPUT = icu_interval_out,
+ INTERNALLENGTH = 20,
+ ALIGNMENT = 'double'
+-- SEND = icu_interval_send,
+-- RECEIVE = interval_recv
+);
+
+CREATE FUNCTION icu_from_interval (interval) RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_from_interval'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE CAST (interval AS icu_interval)
+ WITH FUNCTION icu_from_interval(interval)
+ AS IMPLICIT;
+
