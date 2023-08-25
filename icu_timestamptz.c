@@ -270,3 +270,4 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 #endif
 	PG_RETURN_TIMESTAMPTZ(result);
 }
+

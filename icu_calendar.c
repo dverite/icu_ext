@@ -405,6 +405,8 @@ icu_date_out(PG_FUNCTION_ARGS)
 	}
 	PG_RETURN_CSTRING(result);
 }
+
+
 /*
 TODO:
 - accept 'infinity'::icu_date (see if uppercase spaces before/after are tolerated)

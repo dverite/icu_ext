@@ -83,18 +83,17 @@ Internally, the representation if the same as the `timestamptz` type, and `icu_t
 Like the `interval` built-in data type, it represents spans of time,
 but differs in not assuming that one year always equals 12 months. How
 spans of time are added to dates and timestamps depend on the current
-calendar. For instance, in the ethiopic traditional calendar, years
-have 13 months. It also accepts a simplified text representation
-compared to the `interval` data type.
-
-The representation is `'<number>Y <number>M <number>D <number>h <number>m <number>s'`
-for respectively years, months, days, hours, minutes and seconds, with only the
-`seconds` field accepting decimal numbers with a fractional part (the
-other fields must be integers). The fields with value of zero are normally not displayed.
-
+calendar. For instance, in the ethiopic calendar, there are 13 months in
+a year. `icu_interval` accepts the same text representation
+as the `interval` data type.
 
 `icu_interval` can be cast to and from `interval`.
 
+## Operators
+
+### icu_interval * int
+### icu_timestamptz + icu_interval
+### icu_timestamptz - icu_interval
 
 ## Configurable settings
 
