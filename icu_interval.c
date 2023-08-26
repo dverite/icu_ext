@@ -34,8 +34,10 @@ PG_FUNCTION_INFO_V1(icu_interval_in);
 PG_FUNCTION_INFO_V1(icu_interval_out);
 PG_FUNCTION_INFO_V1(icu_from_interval);
 PG_FUNCTION_INFO_V1(icu_timestamptz_add_interval);
+PG_FUNCTION_INFO_V1(icu_interval_add_timestamptz);
 PG_FUNCTION_INFO_V1(icu_timestamptz_sub_interval);
 PG_FUNCTION_INFO_V1(icu_interval_mul);
+PG_FUNCTION_INFO_V1(icu_mul_i_interval);
 
 /* Convert a Postgres timestamp into an ICU timestamp */
 static UDate
@@ -275,13 +277,25 @@ icu_from_interval(PG_FUNCTION_ARGS)
 }
 
 /*
- * Add an icu_interval to an icu_timestamptz
+ * icu_timestamptz + icu_interval
  */
 Datum
 icu_timestamptz_add_interval(PG_FUNCTION_ARGS)
 {
 	TimestampTz pg_ts = PG_GETARG_TIMESTAMPTZ(0);
 	icu_interval_t *itv = (icu_interval_t*) PG_GETARG_DATUM(1);
+
+	return add_interval(pg_ts, itv, icu_ext_default_locale);
+}
+
+/*
+ * icu_interval + icu_timestamptz
+ */
+Datum
+icu_interval_add_timestamptz(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *itv = (icu_interval_t*) PG_GETARG_DATUM(0);
+	TimestampTz pg_ts = PG_GETARG_TIMESTAMPTZ(1);
 
 	return add_interval(pg_ts, itv, icu_ext_default_locale);
 }
@@ -321,11 +335,24 @@ icu_interval_mul(PG_FUNCTION_ARGS)
 	return PointerGetDatum(result);
 }
 
+/* integer multiplied by icu_interval */
+Datum
+icu_mul_i_interval(PG_FUNCTION_ARGS)
+{
+	Datum factor = PG_GETARG_DATUM(0);
+	Datum itv = PG_GETARG_DATUM(1);
+	return DirectFunctionCall2(icu_interval_mul, itv, factor);
+}
+
+
 /*
 TODO:
 - binary
-- icu_interval + icu_timestamptz
+- icu_interval - icu_interval
+- icu_interval + icu_interval
 - cast from icu_interval to interval?
+- explicit cast from timestamptz to icu_date?
+- cast from icu_timestamptz to icu_date?
 - add to icu_date?
 - justify_interval?
 */

@@ -337,25 +337,48 @@ CREATE CAST (interval AS icu_interval)
  WITH FUNCTION icu_from_interval(interval)
  AS IMPLICIT;
 
+/* icu_timestamptz plus icu_interval */
 CREATE FUNCTION icu_timestamptz_add_interval(icu_timestamptz, icu_interval)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_timestamptz_add_interval'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
+/* icu_interval plus icu_timestamptz */
+CREATE FUNCTION icu_interval_add_timestamptz(icu_interval, icu_timestamptz)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_interval_add_timestamptz'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* icu_timestamptz minus icu_interval */
 CREATE FUNCTION icu_timestamptz_sub_interval(icu_timestamptz, icu_interval)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_timestamptz_sub_interval'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
-CREATE FUNCTION icu_interval_mul(icu_interval,int)
+/* icu_interval multiplied by integer */
+CREATE FUNCTION icu_interval_mul(icu_interval, int)
 RETURNS icu_interval
 AS 'MODULE_PATHNAME', 'icu_interval_mul'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* integer multiplied by icu_interval */
+CREATE FUNCTION icu_mul_i_interval(int, icu_interval)
+RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_mul_i_interval'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
 
 CREATE OPERATOR + (
  PROCEDURE = icu_timestamptz_add_interval,
  LEFTARG = icu_timestamptz,
  RIGHTARG = icu_interval,
+ COMMUTATOR = +
+);
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_interval_add_timestamptz,
+ LEFTARG = icu_interval,
+ RIGHTARG = icu_timestamptz,
  COMMUTATOR = +
 );
 
@@ -369,5 +392,12 @@ CREATE OPERATOR * (
  PROCEDURE = icu_interval_mul,
  LEFTARG = icu_interval,
  RIGHTARG = int,
+ COMMUTATOR = *
+);
+
+CREATE OPERATOR * (
+ PROCEDURE = icu_mul_i_interval,
+ LEFTARG = int,
+ RIGHTARG = icu_interval,
  COMMUTATOR = *
 );
