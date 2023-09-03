@@ -52,7 +52,7 @@ PG_FUNCTION_INFO_V1(icu_char_name);
  */
 char *icu_ext_default_locale;
 char *icu_ext_date_format;
-char *icu_ext_timestamp_format;
+char *icu_ext_timestamptz_format;
 
 void		_PG_init(void);
 
@@ -923,10 +923,10 @@ _PG_init(void)
 							   NULL,
 							   NULL);
 
-	DefineCustomStringVariable("icu_ext.timestamp_format",
-							   "Sets the default input/output format for timestamp values.",
+	DefineCustomStringVariable("icu_ext.timestamptz_format",
+							   "Sets the default input/output format for timestamptz values.",
 							   NULL,
-							   &icu_ext_timestamp_format,
+							   &icu_ext_timestamptz_format,
 							   NULL,
 							   PGC_USERSET,
 							   0,
