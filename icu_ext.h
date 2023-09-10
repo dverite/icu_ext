@@ -8,7 +8,9 @@
  */
 
 #include "postgres.h"
+#include "datatype/timestamp.h"
 #include "unicode/ucol.h"
+#include "unicode/udat.h"
 
 /*
  * icu_interval_t is like Interval except for the additional year
@@ -28,3 +30,5 @@ UCollator* ucollator_from_coll_id(Oid collid);
 extern char *icu_ext_default_locale;
 extern char *icu_ext_date_format;
 extern char *icu_ext_timestamptz_format;
+extern UDateFormatStyle icu_ext_date_style;
+extern UDateFormatStyle icu_ext_timestamptz_style;

@@ -325,6 +325,7 @@ dateadt_to_udate(DateADT pg_date)
 }
 
 
+
 Datum
 icu_date_out(PG_FUNCTION_ARGS)
 {
@@ -348,14 +349,18 @@ icu_date_out(PG_FUNCTION_ARGS)
 	{
 		UChar *output_pattern = NULL;
 		int32_t pattern_length = -1;
+		UDateFormatStyle style = icu_ext_date_style;
 
 		udate = dateadt_to_udate(date);
 
-		if (icu_ext_date_format != NULL && icu_ext_date_format[0] != '\0')
+		if (icu_ext_date_format != NULL)
 		{
-			pattern_length = icu_to_uchar(&output_pattern,
-										  icu_ext_date_format,
-										  strlen(icu_ext_date_format));
+			if (icu_ext_date_format[0] != '\0' && icu_ext_date_style == UDAT_NONE)
+			{
+				pattern_length = icu_to_uchar(&output_pattern,
+											  icu_ext_date_format,
+											  strlen(icu_ext_date_format));
+			}
 		}
 
 		if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
@@ -369,7 +374,7 @@ icu_date_out(PG_FUNCTION_ARGS)
 								   strlen(UCAL_UNKNOWN_ZONE_ID));
 		/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
 		df = udat_open(output_pattern ? UDAT_PATTERN : UDAT_NONE,	 /* timeStyle */
-					   output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
+					   output_pattern ? UDAT_PATTERN : style, /* dateStyle */
 					   locale,		 /* NULL for the default locale */
 					   tzid,		 /* tzID (NULL=default). */
 					   tzid_length,			 /* tzIDLength */
