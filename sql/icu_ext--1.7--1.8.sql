@@ -115,6 +115,16 @@ CREATE TYPE icu_date (
  LIKE = pg_catalog.date
 );
 
+CREATE FUNCTION icu_date_add_days(icu_date, int4)
+RETURNS icu_date
+AS 'MODULE_PATHNAME', 'icu_date_add_days'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE FUNCTION icu_date_days_add(int4, icu_date)
+RETURNS icu_date
+AS 'MODULE_PATHNAME', 'icu_date_days_add'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
 CREATE FUNCTION icu_date_eq (icu_date, icu_date) RETURNS bool
 LANGUAGE internal AS 'date_eq' IMMUTABLE STRICT;
 
@@ -193,6 +203,18 @@ OPERATOR 3 =,
 OPERATOR 4 >=,
 OPERATOR 5 >,
 FUNCTION 1 icu_date_cmp(icu_date, icu_date);
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_date_add_days,
+ LEFTARG = icu_date,
+ RIGHTARG = int4
+);
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_date_days_add,
+ LEFTARG = int4,
+ RIGHTARG = icu_date
+);
 
 CREATE CAST (icu_date AS date) WITHOUT FUNCTION AS IMPLICIT;
 CREATE CAST (date AS icu_date) WITHOUT FUNCTION AS IMPLICIT;

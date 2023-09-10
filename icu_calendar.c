@@ -32,6 +32,8 @@ PG_FUNCTION_INFO_V1(icu_parse_date_locale);
 PG_FUNCTION_INFO_V1(icu_parse_date_default_locale);
 PG_FUNCTION_INFO_V1(icu_date_in);
 PG_FUNCTION_INFO_V1(icu_date_out);
+PG_FUNCTION_INFO_V1(icu_date_add_days);
+PG_FUNCTION_INFO_V1(icu_date_days_add);
 
 
 /* Convert a Postgres timestamp into an ICU timestamp */
@@ -411,6 +413,23 @@ icu_date_out(PG_FUNCTION_ARGS)
 	PG_RETURN_CSTRING(result);
 }
 
+Datum
+icu_date_add_days(PG_FUNCTION_ARGS)
+{
+	DateADT date = PG_GETARG_DATEADT(0);
+	int32 days = PG_GETARG_INT32(1);
+	/* same operation as the built-in date type */
+	return DirectFunctionCall2(date_pli, date, days);
+}
+
+Datum
+icu_date_days_add(PG_FUNCTION_ARGS)
+{
+	int32 days = PG_GETARG_INT32(0);
+	DateADT date = PG_GETARG_DATEADT(1);
+	/* same operation as the built-in date type */
+	return DirectFunctionCall2(date_pli, date, days);
+}
 
 /*
 TODO:
