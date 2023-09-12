@@ -32,3 +32,5 @@ extern char *icu_ext_date_format;
 extern char *icu_ext_timestamptz_format;
 extern UDateFormatStyle icu_ext_date_style;
 extern UDateFormatStyle icu_ext_timestamptz_style;
+
+extern UDateFormatStyle date_format_style(const char *fmt);

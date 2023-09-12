@@ -904,7 +904,7 @@ icu_char_name(PG_FUNCTION_ARGS)
  * Convert {full|medium|...} into an UDateFormatStyle value, or UDAT_NONE
  *  if not recognized
  */
-static int
+UDateFormatStyle
 date_format_style(const char *fmt)
 {
 	UDateFormatStyle style = UDAT_NONE;

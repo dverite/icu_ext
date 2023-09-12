@@ -91,6 +91,7 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 	UChar* tzid;
 	int32_t tzid_length;
 	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
+	UDateFormatStyle style;
 
 	if (TIMESTAMP_NOT_FINITE(pg_tstz))
 	{
@@ -102,16 +103,27 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 	}
 
 	dat = ts_to_udate(pg_tstz);
-	pattern_length = icu_to_uchar(&pattern_buf, icu_date_format, strlen(icu_date_format));
+
+	style = date_format_style(icu_date_format);
+	if (style == UDAT_NONE)
+	{
+		pattern_length = icu_to_uchar(&pattern_buf, icu_date_format, strlen(icu_date_format));
+		style = UDAT_PATTERN;
+	}
+	else
+	{
+		pattern_length = -1;
+		pattern_buf = NULL;
+	}
 
 	tzid_length = icu_to_uchar(&tzid,
 							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
 							   strlen(pg_tz_name));
 
 	/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
-	df = udat_open(UDAT_PATTERN, /* timeStyle */
-				   UDAT_PATTERN, /* dateStyle */
-				   locale,		 /* NULL for the default locale */
+	df = udat_open(style,		/* timeStyle */
+				   style,		/* dateStyle */
+				   locale,		/* NULL for the default locale */
 				   tzid,			/* tzID (NULL=default). */
 				   tzid_length,			/* tzIDLength */
 				   pattern_buf,
