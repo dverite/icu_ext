@@ -1,5 +1,5 @@
 /*
- * icu_timestamp.c
+ * icu_timestamptz.c
  *
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
