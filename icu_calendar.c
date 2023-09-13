@@ -256,24 +256,26 @@ icu_date_in(PG_FUNCTION_ARGS)
 	int32_t u_date_length;
 	UDateFormat* df = NULL;
 	UDate udat;
+	UDateFormatStyle style = icu_ext_date_style;
 	UErrorCode status = U_ZERO_ERROR;
 	UChar *input_pattern = NULL;
 	Timestamp pg_ts;
 	const char *locale = NULL;
 	DateADT		result;
-	struct pg_tm tt,
-			   *tm = &tt;
+	struct pg_tm tm;
 	fsec_t		fsec;
 	int32_t parse_pos = 0;
 	UChar* tzid;
 	int32_t tzid_length;
-	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 	
-	if (icu_ext_date_format != NULL && icu_ext_date_format[0] != '\0')
+	if (icu_ext_date_format != NULL)
 	{
-		pattern_length = icu_to_uchar(&input_pattern,
-									  icu_ext_date_format,
-									  strlen(icu_ext_date_format));
+		if (icu_ext_date_format[0] != '\0' && icu_ext_date_style == UDAT_NONE)
+		{
+			pattern_length = icu_to_uchar(&input_pattern,
+										  icu_ext_date_format,
+										  strlen(icu_ext_date_format));
+		}
 	}
 
 	u_date_length = icu_to_uchar(&u_date_string, date_string, strlen(date_string));
@@ -284,12 +286,12 @@ icu_date_in(PG_FUNCTION_ARGS)
 	}
 
 	tzid_length = icu_to_uchar(&tzid,
-							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
-							   strlen(pg_tz_name));
+							   "GMT", /* for dates, we ignore timezones */
+							   3);
 
 	/* if UDAT_PATTERN is used, we must pass it for both timeStyle and dateStyle */
 	df = udat_open(input_pattern ? UDAT_PATTERN : UDAT_NONE,	 /* timeStyle */
-				   input_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
+				   input_pattern ? UDAT_PATTERN : style, /* dateStyle */
 				   locale,
 				   tzid,		/* tzID */
 				   tzid_length,			/* tzIDLength */
@@ -317,12 +319,12 @@ icu_date_in(PG_FUNCTION_ARGS)
 	/* convert UDate to julian days, with an intermediate Timestamp to use date2j */
 	pg_ts = udate_to_ts(udat);
 
-	if (timestamp2tm(pg_ts, NULL, tm, &fsec, NULL, NULL) != 0)
+	if (timestamp2tm(pg_ts, NULL, &tm, &fsec, NULL, NULL) != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("date out of range: \"%s\"", date_string)));
 
-	result = date2j(tm->tm_year, tm->tm_mon, tm->tm_mday) - POSTGRES_EPOCH_JDATE;
+	result = date2j(tm.tm_year, tm.tm_mon, tm.tm_mday) - POSTGRES_EPOCH_JDATE;
 
 	PG_RETURN_DATEADT(result);
 }
@@ -443,11 +445,6 @@ icu_date_days_add(PG_FUNCTION_ARGS)
 	return DirectFunctionCall2(date_pli, date, days);
 }
 
-/*
-TODO:
-- accept 'infinity'::icu_date (see if uppercase spaces before/after are tolerated)
- or say that 'infinity'::date should be used
-*/
 
 /*
  GUC:
