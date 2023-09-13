@@ -24,7 +24,12 @@ many calendars:
 * roc
 
 These calendars provide different names for days, months, eras, and also
-may have different numbers of days within months and months within years.
+may have different numbers of days within months and months within years,
+when leap months are inserted.
+They are often used alongside the gregorian calendar in specific
+contexts, such as religious. 
+The gregorian calendar is a solar calendar, but certain of these
+calendars are lunisolar.
 
 
 Also, ICU provides localized date and time inputs and outputs that differ in some aspects from PostgreSQL. The time and date fields are described in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/).
@@ -83,18 +88,17 @@ Internally, the representation if the same as the `timestamptz` type, and `icu_t
 Like the `interval` built-in data type, it represents spans of time,
 but differs in not assuming that one year always equals 12 months. How
 spans of time are added to dates and timestamps depend on the current
-calendar. For instance, in the ethiopic traditional calendar, years
-have 13 months. It also accepts a simplified text representation
-compared to the `interval` data type.
-
-The representation is `'<number>Y <number>M <number>D <number>h <number>m <number>s'`
-for respectively years, months, days, hours, minutes and seconds, with only the
-`seconds` field accepting decimal numbers with a fractional part (the
-other fields must be integers). The fields with value of zero are normally not displayed.
-
+calendar. For instance, in the ethiopic calendar, there are 13 months in
+a year. `icu_interval` accepts the same text representation
+as the `interval` data type.
 
 `icu_interval` can be cast to and from `interval`.
 
+## Operators
+
+### icu_interval * int
+### icu_timestamptz + icu_interval
+### icu_timestamptz - icu_interval
 
 ## Configurable settings
 

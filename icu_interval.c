@@ -12,6 +12,7 @@
 #include "fmgr.h"
 #include "funcapi.h"
 #include "miscadmin.h"
+#include "common/int.h"
 #include "utils/builtins.h"
 #include "utils/timestamp.h"
 #include "utils/pg_locale.h"
@@ -24,25 +25,19 @@
 #include "unicode/udat.h"
 #include "unicode/ustring.h"
 
+#include "icu_ext.h"
+
 PG_FUNCTION_INFO_V1(icu_add_interval);
 PG_FUNCTION_INFO_V1(icu_add_interval_default_locale);
 
 PG_FUNCTION_INFO_V1(icu_interval_in);
 PG_FUNCTION_INFO_V1(icu_interval_out);
 PG_FUNCTION_INFO_V1(icu_from_interval);
-
-/*
- * icu_interval_t is like Interval except for the additional year
- * field. Interval considers that 1 year = 12 months, whereas
- * icu_interval_t does not.
- */
-typedef struct {
-	TimeOffset	time;			/* all time units other than days, months and
-								 * years */
-	int32		day;			/* days, after time for alignment */
-	int32		month;			/* months, after time for alignment */
-	int32		year;			/* years */
-} icu_interval_t;
+PG_FUNCTION_INFO_V1(icu_timestamptz_add_interval);
+PG_FUNCTION_INFO_V1(icu_interval_add_timestamptz);
+PG_FUNCTION_INFO_V1(icu_timestamptz_sub_interval);
+PG_FUNCTION_INFO_V1(icu_interval_mul);
+PG_FUNCTION_INFO_V1(icu_mul_i_interval);
 
 /* Convert a Postgres timestamp into an ICU timestamp */
 static UDate
@@ -83,7 +78,7 @@ udate_to_ts(const UDate ud)
  */
 static
 Datum
-add_interval(TimestampTz ts, Interval *ival, const char *locale)
+add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 {
 	UErrorCode status = U_ZERO_ERROR;
 	UDate date_time = ts_to_udate(ts);
@@ -101,7 +96,10 @@ add_interval(TimestampTz ts, Interval *ival, const char *locale)
 
 	ucal_setMillis(ucal, date_time, &status);
 
-	/* Add months and days, with the rules of the given calendar */
+	/* Add years, months, days, with the rules of the given calendar */
+	if (ival->year != 0)
+		ucal_add(ucal, UCAL_YEAR, ival->year, &status);
+
 	if (ival->month != 0)
 		ucal_add(ucal, UCAL_MONTH, ival->month, &status);
 
@@ -129,8 +127,13 @@ icu_add_interval(PG_FUNCTION_ARGS)
 	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
 	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
 	const char *locale = text_to_cstring(PG_GETARG_TEXT_PP(2));
+	icu_interval_t ival;
 
-	return add_interval(pg_tstz, pg_interval, locale);
+	ival.time = pg_interval->time;
+	ival.day = pg_interval->day;
+	ival.month = pg_interval->month;
+	ival.year = 0;
+	return add_interval(pg_tstz, &ival, locale);
 }
 
 Datum
@@ -138,8 +141,13 @@ icu_add_interval_default_locale(PG_FUNCTION_ARGS)
 {
 	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
 	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
+	icu_interval_t ival;
 
-	return add_interval(pg_tstz, pg_interval, NULL);
+	ival.time = pg_interval->time;
+	ival.day = pg_interval->day;
+	ival.month = pg_interval->month;
+	ival.year = 0;
+	return add_interval(pg_tstz, &ival, NULL);
 }
 
 Datum
@@ -269,10 +277,82 @@ icu_from_interval(PG_FUNCTION_ARGS)
 }
 
 /*
+ * icu_timestamptz + icu_interval
+ */
+Datum
+icu_timestamptz_add_interval(PG_FUNCTION_ARGS)
+{
+	TimestampTz pg_ts = PG_GETARG_TIMESTAMPTZ(0);
+	icu_interval_t *itv = (icu_interval_t*) PG_GETARG_DATUM(1);
+
+	return add_interval(pg_ts, itv, icu_ext_default_locale);
+}
+
+/*
+ * icu_interval + icu_timestamptz
+ */
+Datum
+icu_interval_add_timestamptz(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *itv = (icu_interval_t*) PG_GETARG_DATUM(0);
+	TimestampTz pg_ts = PG_GETARG_TIMESTAMPTZ(1);
+
+	return add_interval(pg_ts, itv, icu_ext_default_locale);
+}
+
+Datum
+icu_timestamptz_sub_interval(PG_FUNCTION_ARGS)
+{
+	TimestampTz pg_ts = PG_GETARG_TIMESTAMPTZ(0);
+	icu_interval_t *itv = (icu_interval_t*) PG_GETARG_DATUM(1);
+
+	itv->year = -itv->year;
+	itv->month = -itv->month;
+	itv->day = -itv->day;
+	itv->time = -itv->time;
+
+	return add_interval(pg_ts, itv, icu_ext_default_locale);
+}
+
+Datum
+icu_interval_mul(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *itv = (icu_interval_t*) PG_GETARG_DATUM(0);
+	int32 factor = PG_GETARG_INT32(1);
+	icu_interval_t *result;
+
+	result = (icu_interval_t *) palloc(sizeof(icu_interval_t));
+
+	if (pg_mul_s32_overflow(itv->day, factor, &result->day) ||
+		pg_mul_s32_overflow(itv->month, factor, &result->month) ||
+		pg_mul_s32_overflow(itv->year, factor, &result->year) ||
+		pg_mul_s64_overflow(itv->time, factor, &result->time))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+	}
+	return PointerGetDatum(result);
+}
+
+/* integer multiplied by icu_interval */
+Datum
+icu_mul_i_interval(PG_FUNCTION_ARGS)
+{
+	Datum factor = PG_GETARG_DATUM(0);
+	Datum itv = PG_GETARG_DATUM(1);
+	return DirectFunctionCall2(icu_interval_mul, itv, factor);
+}
+
+
+/*
 TODO:
-- in, out with '<number>Y <number>M <number>D <number>h <number>m <number>s'
-- multiplication, as in '1M'::icu_interval * 4
 - binary
-- add to icu_timestamptz and icu_date
+- icu_interval - icu_interval
+- icu_interval + icu_interval
+- cast from icu_interval to interval?
+- explicit cast from timestamptz to icu_date?
+- cast from icu_timestamptz to icu_date?
+- add to icu_date?
 - justify_interval?
 */

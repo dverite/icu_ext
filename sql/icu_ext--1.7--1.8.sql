@@ -115,6 +115,16 @@ CREATE TYPE icu_date (
  LIKE = pg_catalog.date
 );
 
+CREATE FUNCTION icu_date_add_days(icu_date, int4)
+RETURNS icu_date
+AS 'MODULE_PATHNAME', 'icu_date_add_days'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE FUNCTION icu_date_days_add(int4, icu_date)
+RETURNS icu_date
+AS 'MODULE_PATHNAME', 'icu_date_days_add'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
 CREATE FUNCTION icu_date_eq (icu_date, icu_date) RETURNS bool
 LANGUAGE internal AS 'date_eq' IMMUTABLE STRICT;
 
@@ -194,20 +204,38 @@ OPERATOR 4 >=,
 OPERATOR 5 >,
 FUNCTION 1 icu_date_cmp(icu_date, icu_date);
 
+CREATE OPERATOR + (
+ PROCEDURE = icu_date_add_days,
+ LEFTARG = icu_date,
+ RIGHTARG = int4
+);
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_date_days_add,
+ LEFTARG = int4,
+ RIGHTARG = icu_date
+);
+
 CREATE CAST (icu_date AS date) WITHOUT FUNCTION AS IMPLICIT;
 CREATE CAST (date AS icu_date) WITHOUT FUNCTION AS IMPLICIT;
 
 
+/*
+CREATE FUNCTION icu_timestamp_sub_interval(icu_timestamptz, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_timestamp_sub_interval'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+*/
 
 ---
 --- icu_timestamptz datatype
 ---
-CREATE OR REPLACE FUNCTION icu_timestamptz_in(cstring)
+CREATE FUNCTION icu_timestamptz_in(cstring)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_timestamptz_in'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION icu_timestamptz_out(icu_timestamptz)
+CREATE FUNCTION icu_timestamptz_out(icu_timestamptz)
 RETURNS cstring
 AS 'MODULE_PATHNAME', 'icu_timestamptz_out'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
@@ -331,3 +359,67 @@ CREATE CAST (interval AS icu_interval)
  WITH FUNCTION icu_from_interval(interval)
  AS IMPLICIT;
 
+/* icu_timestamptz plus icu_interval */
+CREATE FUNCTION icu_timestamptz_add_interval(icu_timestamptz, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_timestamptz_add_interval'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* icu_interval plus icu_timestamptz */
+CREATE FUNCTION icu_interval_add_timestamptz(icu_interval, icu_timestamptz)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_interval_add_timestamptz'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* icu_timestamptz minus icu_interval */
+CREATE FUNCTION icu_timestamptz_sub_interval(icu_timestamptz, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_timestamptz_sub_interval'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* icu_interval multiplied by integer */
+CREATE FUNCTION icu_interval_mul(icu_interval, int)
+RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_interval_mul'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* integer multiplied by icu_interval */
+CREATE FUNCTION icu_mul_i_interval(int, icu_interval)
+RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_mul_i_interval'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_timestamptz_add_interval,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_interval,
+ COMMUTATOR = +
+);
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_interval_add_timestamptz,
+ LEFTARG = icu_interval,
+ RIGHTARG = icu_timestamptz,
+ COMMUTATOR = +
+);
+
+CREATE OPERATOR - (
+ PROCEDURE = icu_timestamptz_sub_interval,
+ LEFTARG = icu_timestamptz,
+ RIGHTARG = icu_interval
+);
+
+CREATE OPERATOR * (
+ PROCEDURE = icu_interval_mul,
+ LEFTARG = icu_interval,
+ RIGHTARG = int,
+ COMMUTATOR = *
+);
+
+CREATE OPERATOR * (
+ PROCEDURE = icu_mul_i_interval,
+ LEFTARG = int,
+ RIGHTARG = icu_interval,
+ COMMUTATOR = *
+);

@@ -1,5 +1,5 @@
 /*
- * icu_timestamp.c
+ * icu_timestamptz.c
  *
  * Part of icu_ext: a PostgreSQL extension to expose functionality from ICU
  * (see http://icu-project.org)
@@ -130,11 +130,11 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
 
-		if (icu_ext_timestamp_format != NULL && icu_ext_timestamp_format[0] != '\0')
+		if (icu_ext_timestamptz_format != NULL && icu_ext_timestamptz_format[0] != '\0')
 		{
 			pattern_length = icu_to_uchar(&output_pattern,
-										  icu_ext_timestamp_format,
-										  strlen(icu_ext_timestamp_format));
+										  icu_ext_timestamptz_format,
+										  strlen(icu_ext_timestamptz_format));
 		}
 
 		if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
@@ -270,3 +270,4 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 #endif
 	PG_RETURN_TIMESTAMPTZ(result);
 }
+
