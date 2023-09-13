@@ -24,7 +24,12 @@ many calendars:
 * roc
 
 These calendars provide different names for days, months, eras, and also
-may have different numbers of days within months and months within years.
+may have different numbers of days within months and months within years,
+when leap months are inserted.
+They are often used alongside the gregorian calendar in specific
+contexts, such as religious. 
+The gregorian calendar is a solar calendar, but certain of these
+calendars are lunisolar.
 
 
 Also, ICU provides localized date and time inputs and outputs that differ in some aspects from PostgreSQL. The time and date fields are described in [Formatting Dates and Times](https://unicode-org.github.io/icu/userguide/format_parse/datetime/).
