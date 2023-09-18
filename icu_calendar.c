@@ -267,7 +267,7 @@ icu_date_in(PG_FUNCTION_ARGS)
 	int32_t parse_pos = 0;
 	UChar* tzid;
 	int32_t tzid_length;
-	
+
 	if (icu_ext_date_format != NULL)
 	{
 		if (icu_ext_date_format[0] != '\0' && icu_ext_date_style == UDAT_NONE)

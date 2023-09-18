@@ -54,6 +54,7 @@ PG_FUNCTION_INFO_V1(icu_char_name);
 char *icu_ext_default_locale;
 char *icu_ext_date_format;
 char *icu_ext_timestamptz_format;
+/* Built-in ICU styles that are #define'd. See date_format_style() */
 UDateFormatStyle icu_ext_date_style = UDAT_DEFAULT;
 UDateFormatStyle icu_ext_timestamptz_style = UDAT_DEFAULT;
 
@@ -938,6 +939,15 @@ assign_guc_date_format(const char *newval, void *extra)
 		icu_ext_date_style = UDAT_NONE;
 }
 
+static void
+assign_guc_timestamptz_format(const char *newval, void *extra)
+{
+	if (*newval == '{')
+		icu_ext_timestamptz_style = date_format_style(newval);
+	else
+		icu_ext_timestamptz_style = UDAT_NONE;
+}
+
 static bool
 check_guc_date_format(char **newval, void **extra, GucSource source)
 {
@@ -983,11 +993,11 @@ _PG_init(void)
 							   "Sets the default input/output format for timestamptz values.",
 							   NULL,
 							   &icu_ext_timestamptz_format,
-							   NULL,
+							   "{medium}",
 							   PGC_USERSET,
 							   0,
-							   NULL,
-							   NULL,
+							   check_guc_date_format,
+							   assign_guc_timestamptz_format,
 							   NULL);
 
 	EmitWarningsOnPlaceholders("icu_ext");
