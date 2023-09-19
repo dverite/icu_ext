@@ -423,3 +423,28 @@ CREATE OPERATOR * (
  RIGHTARG = icu_interval,
  COMMUTATOR = *
 );
+
+/* icu_interval plus icu_interval */
+CREATE FUNCTION icu_interv_plus_interv(icu_interval, icu_interval)
+RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_interv_plus_interv'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+/* icu_interval plus icu_interval */
+CREATE FUNCTION icu_interv_minus_interv(icu_interval, icu_interval)
+RETURNS icu_interval
+AS 'MODULE_PATHNAME', 'icu_interv_minus_interv'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_interv_plus_interv,
+ LEFTARG = icu_interval,
+ RIGHTARG = icu_interval,
+ COMMUTATOR = +
+);
+
+CREATE OPERATOR - (
+ PROCEDURE = icu_interv_minus_interv,
+ LEFTARG = icu_interval,
+ RIGHTARG = icu_interval
+);
