@@ -38,6 +38,8 @@ PG_FUNCTION_INFO_V1(icu_interval_add_timestamptz);
 PG_FUNCTION_INFO_V1(icu_timestamptz_sub_interval);
 PG_FUNCTION_INFO_V1(icu_interval_mul);
 PG_FUNCTION_INFO_V1(icu_mul_i_interval);
+PG_FUNCTION_INFO_V1(icu_interv_plus_interv);
+PG_FUNCTION_INFO_V1(icu_interv_minus_interv);
 
 /* Convert a Postgres timestamp into an ICU timestamp */
 static UDate
@@ -155,12 +157,11 @@ icu_interval_in(PG_FUNCTION_ARGS)
 {
 	icu_interval_t *result;
 	char	   *str = PG_GETARG_CSTRING(0);
-	int32		typmod = PG_GETARG_INT32(2);
+/*	int32		typmod = PG_GETARG_INT32(2);  */
 	struct pg_itm_in tt,
 			   *itm_in = &tt;
 	int			dtype;
 	int			nf;
-	int			range;
 	int			dterr;
 	char	   *field[MAXDATEFIELDS];
 	int			ftype[MAXDATEFIELDS];
@@ -175,15 +176,10 @@ icu_interval_in(PG_FUNCTION_ARGS)
 	itm_in->tm_mday = 0;
 	itm_in->tm_usec = 0;
 
-	if (typmod >= 0)
-		range = INTERVAL_RANGE(typmod);
-	else
-		range = INTERVAL_FULL_RANGE;
-
 	dterr = ParseDateTime(str, workbuf, sizeof(workbuf), field,
 						  ftype, MAXDATEFIELDS, &nf);
 	if (dterr == 0)
-		dterr = DecodeInterval(field, ftype, nf, range,
+		dterr = DecodeInterval(field, ftype, nf, INTERVAL_FULL_RANGE,
 							   &dtype, itm_in);
 
 	/* if those functions think it's a bad format, try ISO8601 style */
@@ -219,10 +215,6 @@ icu_interval_in(PG_FUNCTION_ARGS)
 			elog(ERROR, "unexpected dtype %d while parsing interval \"%s\"",
 				 dtype, str);
 	}
-#if 0
-	// FIXME
-	AdjustIntervalForTypmod(result, typmod, escontext);
-#endif
 
 	return PointerGetDatum(result);
 }
@@ -345,14 +337,54 @@ icu_mul_i_interval(PG_FUNCTION_ARGS)
 }
 
 
+/* icu_interval + icu_interval */
+Datum
+icu_interv_plus_interv(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *i1 = (icu_interval_t*) PG_GETARG_DATUM(0);
+	icu_interval_t *i2 = (icu_interval_t*) PG_GETARG_DATUM(1);
+	icu_interval_t *result;
+
+	result = (icu_interval_t *) palloc(sizeof(icu_interval_t));
+	if (pg_add_s32_overflow(i1->day, i2->day, &result->day) ||
+		pg_add_s32_overflow(i1->month, i2->month, &result->month) ||
+		pg_add_s32_overflow(i1->year, i2->year, &result->year) ||
+		pg_add_s64_overflow(i1->time, i2->time, &result->time))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+	}
+	return PointerGetDatum(result);
+}
+
+/* icu_interval - icu_interval */
+Datum
+icu_interv_minus_interv(PG_FUNCTION_ARGS)
+{
+	icu_interval_t *i1 = (icu_interval_t*) PG_GETARG_DATUM(0);
+	icu_interval_t *i2 = (icu_interval_t*) PG_GETARG_DATUM(1);
+	icu_interval_t *result;
+
+	result = (icu_interval_t *) palloc(sizeof(icu_interval_t));
+	if (pg_add_s32_overflow(i1->day, -i2->day, &result->day) ||
+		pg_add_s32_overflow(i1->month, -i2->month, &result->month) ||
+		pg_add_s32_overflow(i1->year, -i2->year, &result->year) ||
+		pg_add_s64_overflow(i1->time, -i2->time, &result->time))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+	}
+	return PointerGetDatum(result);
+}
+
+
 /*
 TODO:
 - binary
-- icu_interval - icu_interval
-- icu_interval + icu_interval
 - cast from icu_interval to interval?
 - explicit cast from timestamptz to icu_date?
 - cast from icu_timestamptz to icu_date?
-- add to icu_date?
 - justify_interval?
 */

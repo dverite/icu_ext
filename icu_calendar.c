@@ -120,10 +120,6 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
 							   strlen(pg_tz_name));
 
-	tzid_length = icu_to_uchar(&tzid,
-							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
-							   strlen(pg_tz_name));
-
 	/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
 	df = udat_open(style,		/* timeStyle */
 				   style,		/* dateStyle */
@@ -271,7 +267,7 @@ icu_date_in(PG_FUNCTION_ARGS)
 	int32_t parse_pos = 0;
 	UChar* tzid;
 	int32_t tzid_length;
-	
+
 	if (icu_ext_date_format != NULL)
 	{
 		if (icu_ext_date_format[0] != '\0' && icu_ext_date_style == UDAT_NONE)

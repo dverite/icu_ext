@@ -84,7 +84,6 @@ ts_to_udate(TimestampTz pg_tstz)
 	return (UDate)(10957.0*86400*1000 + pg_tstz/1000);
 }
 
-#if 0
 /* Convert an ICU timestamp into a Postgres timestamp */
 static TimestampTz
 udate_to_ts(const UDate ud)
@@ -96,7 +95,6 @@ udate_to_ts(const UDate ud)
 	 */
 	return (TimestampTz)(ud*1000 - 10957LL*86400*1000*1000);
 }
-#endif
 
 /* icu_timestamptz_out()
  * Convert a timestamp to external form.
@@ -118,7 +116,8 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		result = pstrdup(buf);
 		PG_RETURN_CSTRING(result);
 	}
-	else if (timestamp2tm(dt, &tz, tm, &fsec, &tzn, NULL) == 0) {
+	else if (timestamp2tm(dt, &tz, tm, &fsec, &tzn, NULL) == 0)
+	{
 		UErrorCode status = U_ZERO_ERROR;
 		UDateFormat* df = NULL;
 		UDate udate = ts_to_udate(dt);
@@ -127,14 +126,18 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		int32_t pattern_length = -1;
 		UChar* tzid;
 		int32_t tzid_length;
+		UDateFormatStyle style = icu_ext_timestamptz_style;
 		const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
 
-		if (icu_ext_timestamptz_format != NULL && icu_ext_timestamptz_format[0] != '\0')
+		if (icu_ext_timestamptz_format != NULL)
 		{
-			pattern_length = icu_to_uchar(&output_pattern,
-										  icu_ext_timestamptz_format,
-										  strlen(icu_ext_timestamptz_format));
+			if (icu_ext_timestamptz_format[0] != '\0' && icu_ext_timestamptz_style == UDAT_NONE)
+			{
+				pattern_length = icu_to_uchar(&output_pattern,
+											  icu_ext_timestamptz_format,
+											  strlen(icu_ext_timestamptz_format));
+			}
 		}
 
 		if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
@@ -142,13 +145,14 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 			locale = icu_ext_default_locale;
 		}
 
+		/* use PG current timezone, hopefully compatible with ICU */
 		tzid_length = icu_to_uchar(&tzid,
-								   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
+								   pg_tz_name,
 								   strlen(pg_tz_name));
 
 		/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
-		df = udat_open(output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* timeStyle */
-					   output_pattern ? UDAT_PATTERN : UDAT_DEFAULT, /* dateStyle */
+		df = udat_open(output_pattern ? UDAT_PATTERN : style, /* timeStyle */
+					   output_pattern ? UDAT_PATTERN : style, /* dateStyle */
 					   locale,		 /* NULL for the default locale */
 					   tzid,			/* tzID (NULL=default). */
 					   tzid_length,		/* tzIDLength */
@@ -192,82 +196,74 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 
 /* icu_timestamptz_in()
  * Convert a string to internal form.
- * Interim implementation
- * TODO: use the ICU parser
  */
 Datum
 icu_timestamptz_in(PG_FUNCTION_ARGS)
 {
-	char	   *str = PG_GETARG_CSTRING(0);
+	char *input_string = PG_GETARG_CSTRING(0);
+	int32_t pattern_length = -1;
+	UChar *u_ts_string;
+	int32_t u_ts_length;
+	UDateFormat* df = NULL;
+	UDate udat;
+	UDateFormatStyle style = icu_ext_timestamptz_style;
+	UErrorCode status = U_ZERO_ERROR;
+	UChar *input_pattern = NULL;
+	const char *locale = NULL;
+	int32_t parse_pos = 0;
+	UChar* tzid;
+	int32_t tzid_length;
+	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
-#ifdef NOT_USED
-	Oid			typelem = PG_GETARG_OID(1);
-#endif
-	int32		typmod = PG_GETARG_INT32(2);
-	TimestampTz result;
-	fsec_t		fsec;
-	struct pg_tm tt,
-			   *tm = &tt;
-	int			tz;
-	int			dtype;
-	int			nf;
-	int			dterr;
-	char	   *field[MAXDATEFIELDS];
-	int			ftype[MAXDATEFIELDS];
-	char		workbuf[MAXDATELEN + MAXDATEFIELDS];
-#if PG_VERSION_NUM >= 160000
-	Node	   *escontext = fcinfo->context;
-	DateTimeErrorExtra extra;
-#endif	
-	dterr = ParseDateTime(str, workbuf, sizeof(workbuf),
-						  field, ftype, MAXDATEFIELDS, &nf);
-#if PG_VERSION_NUM >= 160000
-	if (dterr == 0)
-		dterr = DecodeDateTime(field, ftype, nf,
-							   &dtype, tm, &fsec, &tz, &extra);
-	if (dterr != 0)
+	if (icu_ext_timestamptz_format != NULL)
 	{
-		DateTimeParseError(dterr, &extra, str, "timestamp", escontext);
-		PG_RETURN_NULL();
-	}	
-#else
-	if (dterr == 0)
-		dterr = DecodeDateTime(field, ftype, nf, &dtype, tm, &fsec, &tz);
-	if (dterr != 0)
-		DateTimeParseError(dterr, str, "timestamp with time zone");
-#endif
-	switch (dtype)
-	{
-		case DTK_DATE:
-			if (tm2timestamp(tm, fsec, &tz, &result) != 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-						 errmsg("timestamp out of range: \"%s\"", str)));
-			break;
-
-		case DTK_EPOCH:
-			result = SetEpochTimestamp();
-			break;
-
-		case DTK_LATE:
-			TIMESTAMP_NOEND(result);
-			break;
-
-		case DTK_EARLY:
-			TIMESTAMP_NOBEGIN(result);
-			break;
-
-		default:
-			elog(ERROR, "unexpected dtype %d while parsing timestamptz \"%s\"",
-				 dtype, str);
-			TIMESTAMP_NOEND(result);
+		if (icu_ext_timestamptz_format[0] != '\0' && style == UDAT_NONE)
+		{
+			pattern_length = icu_to_uchar(&input_pattern,
+										  icu_ext_timestamptz_format,
+										  strlen(icu_ext_timestamptz_format));
+		}
 	}
 
-#if PG_VERSION_NUM >= 160000
-	AdjustTimestampForTypmod(&result, typmod, escontext);
-#else
-	AdjustTimestampForTypmod(&result, typmod);
-#endif
-	PG_RETURN_TIMESTAMPTZ(result);
+	u_ts_length = icu_to_uchar(&u_ts_string, input_string, strlen(input_string));
+
+	if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
+	{
+		locale = icu_ext_default_locale;
+	}
+
+	/* use PG current timezone, hopefully compatible with ICU */
+	tzid_length = icu_to_uchar(&tzid,
+							   pg_tz_name,
+							   strlen(pg_tz_name));
+
+	/* if UDAT_PATTERN is used, we must pass it for both timeStyle and dateStyle */
+	df = udat_open(input_pattern ? UDAT_PATTERN : style,	 /* timeStyle */
+				   input_pattern ? UDAT_PATTERN : style, /* dateStyle */
+				   locale,
+				   tzid,		/* tzID */
+				   tzid_length,			/* tzIDLength */
+				   input_pattern,
+				   pattern_length,
+				   &status);
+	if (U_FAILURE(status))
+	{
+		udat_close(df);
+		elog(ERROR, "udat_open failed: %s\n", u_errorName(status));
+	}
+
+	udat_setLenient(df, false);	/* strict parsing */
+
+	udat = udat_parse(df,
+					  u_ts_string,
+					  u_ts_length,
+					  &parse_pos,
+					  &status);
+	udat_close(df);
+
+	if (U_FAILURE(status))
+		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
+
+	PG_RETURN_TIMESTAMPTZ(udate_to_ts(udat));
 }
 
