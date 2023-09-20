@@ -424,3 +424,26 @@ CREATE OPERATOR - (
  LEFTARG = icu_interval,
  RIGHTARG = icu_interval
 );
+
+CREATE FUNCTION icu_date_plus_interval(icu_date, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE FUNCTION icu_date_minus_interval(icu_date, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_date_plus_interval,
+ LEFTARG = icu_date,
+ RIGHTARG = icu_interval,
+ COMMUTATOR = +
+);
+
+CREATE OPERATOR - (
+ PROCEDURE = icu_date_minus_interval,
+ LEFTARG = icu_date,
+ RIGHTARG = icu_interval
+);

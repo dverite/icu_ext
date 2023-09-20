@@ -35,6 +35,10 @@ extern UDateFormatStyle icu_ext_timestamptz_style;
 
 extern UDateFormatStyle date_format_style(const char *fmt);
 
+extern Datum icu_timestamptz_add_interval(PG_FUNCTION_ARGS);
+extern Datum icu_timestamptz_sub_interval(PG_FUNCTION_ARGS);
+
+
 /*
  * Convert a Postgres timestamp into an ICU timestamp
  * ICU's UDate is a number of milliseconds since the Unix Epoch,

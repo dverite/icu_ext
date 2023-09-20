@@ -34,7 +34,8 @@ PG_FUNCTION_INFO_V1(icu_date_in);
 PG_FUNCTION_INFO_V1(icu_date_out);
 PG_FUNCTION_INFO_V1(icu_date_add_days);
 PG_FUNCTION_INFO_V1(icu_date_days_add);
-
+PG_FUNCTION_INFO_V1(icu_date_plus_interval);
+PG_FUNCTION_INFO_V1(icu_date_minus_interval);
 
 /*
  * Return a text representation of a PG timestamp given the locale and ICU format.
@@ -410,3 +411,33 @@ icu_date_days_add(PG_FUNCTION_ARGS)
 	return DirectFunctionCall2(date_pli, date, days);
 }
 
+
+/* icu_date + icu_interval => icu_timestamptz */
+Datum
+icu_date_plus_interval(PG_FUNCTION_ARGS)
+{
+	Datum ts_datum;
+
+	/* convert the date to a timestamptz */
+	ts_datum = DirectFunctionCall1(date_timestamptz,
+								   PG_GETARG_DATUM(0));
+	/* branch to icu_timestampz + icu_interval */
+	return DirectFunctionCall2(icu_timestamptz_add_interval,
+							   ts_datum,
+							   PG_GETARG_DATUM(1));
+}
+
+/* icu_date - icu-interval => icu_timestamptz */
+Datum
+icu_date_minus_interval(PG_FUNCTION_ARGS)
+{
+	Datum ts_datum;
+
+	/* convert the date to a timestamptz */
+	ts_datum = DirectFunctionCall1(date_timestamptz,
+								   PG_GETARG_DATUM(0));
+	/* branch to icu_timestampz + icu_interval */
+	return DirectFunctionCall2(icu_timestamptz_sub_interval,
+							   ts_datum,
+							   PG_GETARG_DATUM(1));
+}
