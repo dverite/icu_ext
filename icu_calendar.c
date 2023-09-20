@@ -36,45 +36,10 @@ PG_FUNCTION_INFO_V1(icu_date_add_days);
 PG_FUNCTION_INFO_V1(icu_date_days_add);
 
 
-/* Convert a Postgres timestamp into an ICU timestamp */
-static UDate
-ts_to_udate(TimestampTz pg_tstz)
-{
-	/*
-	 *  ICU's UDate is a number of milliseconds since the Unix Epoch,
-	 *  (1970-01-01, 00:00 UTC), stored as a double.
-	 *  Postgres' TimestampTz is a number of microseconds since 2000-01-01 00:00 UTC,
-	 *  stored as an int64.
-	 * The code below translates directly between the epochs
-	 * Ideally these implementation details should not be relied upon here
-	 * but there doesn't seem to be a function udat_xxx() to set the date
-	 * from an epoch.
-	 * Alternatively we could extract the year/month/..etc.. fields from pg_tstz
-	 * and set them one by one in a gregorian calendar with ucal_set(cal, field, value),
-	 * and then obtain the UDate with ucal_getMillis(cal), but it would be slower.
-	 */
-
-	return (UDate)(10957.0*86400*1000 + pg_tstz/1000);
-}
-
-/* Convert an ICU timestamp into a Postgres timestamp */
-static TimestampTz
-udate_to_ts(const UDate ud)
-{
-	/*
-	 * Input: number of milliseconds since 1970-01-01 UTC
-	 * Output: number of microseconds since 2000-01-01 UTC
-	 * See the comment above in ts_to_udate about the translation
-	 */
-	return (TimestampTz)(ud*1000 - 10957LL*86400*1000*1000);
-}
-
-
 /*
  * Return a text representation of a PG timestamp given the locale and ICU format.
  * locale==NULL means the default locale.
  */
-
 static Datum
 icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 {
@@ -102,7 +67,7 @@ icu_format_date(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 		PG_RETURN_TEXT_P(cstring_to_text(result));
 	}
 
-	dat = ts_to_udate(pg_tstz);
+	dat = TS_TO_UDATE(pg_tstz);
 
 	style = date_format_style(icu_date_format);
 	if (style == UDAT_NONE)
@@ -223,7 +188,7 @@ icu_parse_date(const text *input_date,
 	if (U_FAILURE(status))
 		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
 
-	PG_RETURN_TIMESTAMPTZ(udate_to_ts(udat));
+	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(udat));
 }
 
 Datum
@@ -317,7 +282,7 @@ icu_date_in(PG_FUNCTION_ARGS)
 		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
 
 	/* convert UDate to julian days, with an intermediate Timestamp to use date2j */
-	pg_ts = udate_to_ts(udat);
+	pg_ts = UDATE_TO_TS(udat);
 
 	if (timestamp2tm(pg_ts, NULL, &tm, &fsec, NULL, NULL) != 0)
 		ereport(ERROR,

@@ -41,38 +41,6 @@ PG_FUNCTION_INFO_V1(icu_mul_i_interval);
 PG_FUNCTION_INFO_V1(icu_interv_plus_interv);
 PG_FUNCTION_INFO_V1(icu_interv_minus_interv);
 
-/* Convert a Postgres timestamp into an ICU timestamp */
-static UDate
-ts_to_udate(TimestampTz pg_tstz)
-{
-	/*
-	 *  ICU's UDate is a number of milliseconds since the Unix Epoch,
-	 *  (1970-01-01, 00:00 UTC), stored as a double.
-	 *  Postgres' TimestampTz is a number of microseconds since 2000-01-01 00:00 UTC,
-	 *  stored as an int64.
-	 * The code below translates directly between the epochs
-	 * Ideally these implementation details should not be relied upon here
-	 * but there doesn't seem to be a function udat_xxx() to set the date
-	 * from an epoch.
-	 * Alternatively we could extract the year/month/..etc.. fields from pg_tstz
-	 * and set them one by one in a gregorian calendar with ucal_set(cal, field, value),
-	 * and then obtain the UDate with ucal_getMillis(cal), but it would be slower.
-	 */
-
-	return (UDate)(10957.0*86400*1000 + pg_tstz/1000);
-}
-
-/* Convert an ICU timestamp into a Postgres timestamp */
-static TimestampTz
-udate_to_ts(const UDate ud)
-{
-	/*
-	 * Input: number of milliseconds since 1970-01-01 UTC
-	 * Output: number of microseconds since 2000-01-01 UTC
-	 * See the comment above in ts_to_udate about the translation
-	 */
-	return (TimestampTz)(ud*1000 - 10957LL*86400*1000*1000);
-}
 
 /*
  * Add an interval to a timestamp with timezone, given a localized calendar.
@@ -83,7 +51,7 @@ Datum
 add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 {
 	UErrorCode status = U_ZERO_ERROR;
-	UDate date_time = ts_to_udate(ts);
+	UDate date_time = TS_TO_UDATE(ts);
 	UCalendar *ucal;
 
 	ucal = ucal_open(NULL, /* default zoneID */
@@ -120,7 +88,7 @@ add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 		elog(ERROR, "calendar translation failed: %s\n", u_errorName(status));
 	}
 
-	PG_RETURN_TIMESTAMPTZ(udate_to_ts(date_time));
+	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(date_time));
 }
 
 Datum
