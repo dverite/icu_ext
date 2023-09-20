@@ -410,10 +410,3 @@ icu_date_days_add(PG_FUNCTION_ARGS)
 	return DirectFunctionCall2(date_pli, date, days);
 }
 
-
-/*
- GUC:
- icu_ext.locale
- icu_ext.date_format
- icu_ext.timestamptz_format
-*/

@@ -320,7 +320,5 @@ icu_interv_minus_interv(PG_FUNCTION_ARGS)
 TODO:
 - binary
 - cast from icu_interval to interval?
-- explicit cast from timestamptz to icu_date?
-- cast from icu_timestamptz to icu_date?
 - justify_interval?
 */
