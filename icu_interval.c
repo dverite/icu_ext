@@ -27,9 +27,6 @@
 
 #include "icu_ext.h"
 
-PG_FUNCTION_INFO_V1(icu_add_interval);
-PG_FUNCTION_INFO_V1(icu_add_interval_default_locale);
-
 PG_FUNCTION_INFO_V1(icu_interval_in);
 PG_FUNCTION_INFO_V1(icu_interval_out);
 PG_FUNCTION_INFO_V1(icu_from_interval);
@@ -89,35 +86,6 @@ add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 	}
 
 	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(date_time));
-}
-
-Datum
-icu_add_interval(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
-	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
-	const char *locale = text_to_cstring(PG_GETARG_TEXT_PP(2));
-	icu_interval_t ival;
-
-	ival.time = pg_interval->time;
-	ival.day = pg_interval->day;
-	ival.month = pg_interval->month;
-	ival.year = 0;
-	return add_interval(pg_tstz, &ival, locale);
-}
-
-Datum
-icu_add_interval_default_locale(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
-	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
-	icu_interval_t ival;
-
-	ival.time = pg_interval->time;
-	ival.day = pg_interval->day;
-	ival.month = pg_interval->month;
-	ival.year = 0;
-	return add_interval(pg_tstz, &ival, NULL);
 }
 
 Datum

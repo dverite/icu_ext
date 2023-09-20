@@ -50,29 +50,6 @@ LANGUAGE C STRICT STABLE PARALLEL SAFE;
 COMMENT ON FUNCTION icu_format_date(timestamptz,text)
 IS 'Convert a time stamp into a string according to the given format and default locale';
 
-CREATE OR REPLACE FUNCTION icu_add_interval(
- tstamp timestamptz,
- delta interval
-) RETURNS timestamptz
-AS 'MODULE_PATHNAME', 'icu_add_interval_default_locale'
-LANGUAGE C STRICT STABLE PARALLEL SAFE;
-
-
-COMMENT ON FUNCTION icu_add_interval(timestamptz,interval)
-IS 'Add an interval to a timestamp using the calendar of the default locale';
-
-CREATE OR REPLACE FUNCTION icu_add_interval(
- tstamp timestamptz,
- delta interval,
- locale text
-) RETURNS timestamptz
-AS 'MODULE_PATHNAME', 'icu_add_interval'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_add_interval(timestamptz,interval)
-IS 'Add an interval to a timestamp using the calendar of the given locale';
-
-
 ---
 --- icu_date datatype
 ---
