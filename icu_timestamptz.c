@@ -26,44 +26,12 @@
 
 #include "icu_ext.h"
 
-PG_FUNCTION_INFO_V1(icu_diff_timestamps);
-PG_FUNCTION_INFO_V1(icu_diff_timestamps_default_locale);
 PG_FUNCTION_INFO_V1(icu_timestamptz_in);
 PG_FUNCTION_INFO_V1(icu_timestamptz_out);
 
 
-Datum
-icu_diff_timestamps(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
-	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
-	/*
-	  delta interval,
-	  locale text
-	*/
-	long diff = TimestampDifferenceMilliseconds(pg_tstz1, pg_tstz2);
-	Interval *interv = (Interval*)palloc0(sizeof(Interval));
-	interv->time = diff*1000;	/* TimeOffset has units of microseconds */
-	/*
-	  fsec_t fsec = 0;
-	  tm2interval(&tm, fsec, &interv);
-	*/
-	PG_RETURN_INTERVAL_P(interv);
-}
-
-Datum
-icu_diff_timestamps_default_locale(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
-	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
-
-	Interval *interv = (Interval*)palloc0(sizeof(Interval));
-	interv->time = pg_tstz2 - pg_tstz1;	/* TimeOffset has units of microseconds */
-	PG_RETURN_INTERVAL_P(interv);
-}
-
-
-/* icu_timestamptz_out()
+/*
+ * icu_timestamptz_out()
  * Convert a timestamp to external form.
  */
 Datum
@@ -158,10 +126,10 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("timestamp out of range")));
-
 }
 
-/* icu_timestamptz_in()
+/*
+ * icu_timestamptz_in()
  * Convert a string to internal form.
  */
 Datum

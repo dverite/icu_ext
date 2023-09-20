@@ -73,28 +73,6 @@ COMMENT ON FUNCTION icu_add_interval(timestamptz,interval)
 IS 'Add an interval to a timestamp using the calendar of the given locale';
 
 
-CREATE OR REPLACE FUNCTION icu_diff_timestamps(
- tstamp1 timestamptz,
- tstamp2 timestamptz
-) RETURNS interval
-AS 'MODULE_PATHNAME', 'icu_diff_timestamps_default_locale'
-LANGUAGE C STRICT STABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_diff_timestamps(timestamptz,timestamptz)
-IS 'Compute the difference between two dates in the calendar of the default locale';
-
-CREATE OR REPLACE FUNCTION icu_diff_timestamps(
- tstamp1 timestamptz,
- tstamp2 timestamptz,
- locale text
-) RETURNS interval
-AS 'MODULE_PATHNAME', 'icu_diff_timestamps'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_diff_timestamps(timestamptz,timestamptz,text)
-IS 'Compute the difference between two dates according to the calendar of the given locale';
-
-
 ---
 --- icu_date datatype
 ---
