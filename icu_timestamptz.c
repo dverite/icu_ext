@@ -28,7 +28,8 @@
 
 PG_FUNCTION_INFO_V1(icu_timestamptz_in);
 PG_FUNCTION_INFO_V1(icu_timestamptz_out);
-
+PG_FUNCTION_INFO_V1(icu_date_to_ts);
+PG_FUNCTION_INFO_V1(icu_ts_to_date);
 
 /*
  * icu_timestamptz_out()
@@ -202,3 +203,20 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(udat));
 }
 
+Datum
+icu_date_to_ts(PG_FUNCTION_ARGS)
+{
+	return DirectFunctionCall2(date_timestamptz,
+							   PG_GETARG_DATUM(0),
+							   PG_GETARG_DATUM(1));
+
+}
+
+Datum
+icu_ts_to_date(PG_FUNCTION_ARGS)
+{
+	return DirectFunctionCall2(timestamptz_date,
+							   PG_GETARG_DATUM(0),
+							   PG_GETARG_DATUM(1));
+
+}

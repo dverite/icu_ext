@@ -337,6 +337,27 @@ CREATE CAST (interval AS icu_interval)
  WITH FUNCTION icu_from_interval(interval)
  AS IMPLICIT;
 
+CREATE FUNCTION icu_date_to_ts(icu_date) RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_date_to_ts'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE CAST (icu_date AS icu_timestamptz)
+ WITH FUNCTION icu_date_to_ts(icu_date)
+ AS ASSIGNMENT;
+
+CREATE FUNCTION icu_ts_to_date(icu_timestamptz) RETURNS icu_date
+AS 'MODULE_PATHNAME', 'icu_ts_to_date'
+LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+
+CREATE CAST (icu_timestamptz AS icu_date)
+ WITH FUNCTION icu_ts_to_date(icu_timestamptz)
+ AS ASSIGNMENT;
+
+CREATE CAST (timestamptz AS icu_date)
+ WITH FUNCTION icu_ts_to_date(icu_timestamptz)
+ AS ASSIGNMENT;
+
+
 /* icu_timestamptz plus icu_interval */
 CREATE FUNCTION icu_timestamptz_add_interval(icu_timestamptz, icu_interval)
 RETURNS icu_timestamptz
