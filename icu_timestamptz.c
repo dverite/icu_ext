@@ -203,6 +203,11 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(udat));
 }
 
+/*
+ * Conversions between icu_timestamptz and icu_date are exactly the
+ * same as with the PG types timestamptz/date, since they share the
+ * same internal representation.
+ */
 Datum
 icu_date_to_ts(PG_FUNCTION_ARGS)
 {

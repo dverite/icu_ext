@@ -41,8 +41,13 @@ In a night, or in a day,$$
 , 'en');
 
 -- icu_number_spellout
+/* use the unaligned format for this test. With the aligned format,
+   there are environment-related differences in how psql computes
+   the width of strings containing U+00AD (soft hyphen) */
+\pset format unaligned
 SELECT loc, icu_number_spellout(1234, loc)
     FROM (values ('en'),('fr'),('de'),('ru'),('ja')) AS s(loc);
+\pset format aligned
 
 -- icu_replace
 SELECT n,

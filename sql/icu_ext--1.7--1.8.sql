@@ -7,48 +7,85 @@ CREATE FUNCTION icu_parse_date(
  date_string text,
  format text,
  locale text
-) RETURNS timestamptz
+) RETURNS date
 AS 'MODULE_PATHNAME', 'icu_parse_date_locale'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 /* Interface to udat_parse(), without the locale argument. */
 CREATE FUNCTION icu_parse_date(
  date_string text,
  format text
-) RETURNS timestamptz
+) RETURNS date
 AS 'MODULE_PATHNAME', 'icu_parse_date_default_locale'
 LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 COMMENT ON FUNCTION icu_parse_date(text,text,text)
-IS 'Convert a locale-formatted date into a time stamp, using the supplied locale ';
+IS 'Convert a locale-formatted string into a date, using the supplied locale';
 
 COMMENT ON FUNCTION icu_parse_date(text,text)
-IS 'Convert a locale-formatted date into a time stamp';
+IS 'Convert a locale-formatted string into a date, using the default locale';
+
+CREATE FUNCTION icu_parse_datetime(
+ date_string text,
+ format text,
+ locale text
+) RETURNS timestamptz
+AS 'MODULE_PATHNAME', 'icu_parse_datetime_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+/* Interface to udat_parse(), without the locale argument. */
+CREATE FUNCTION icu_parse_datetime(
+ date_string text,
+ format text
+) RETURNS timestamptz
+AS 'MODULE_PATHNAME', 'icu_parse_datetime_default_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+COMMENT ON FUNCTION icu_parse_datetime(text,text,text)
+IS 'Convert a locale-formatted string into a timestamptz, using the supplied locale';
+
+COMMENT ON FUNCTION icu_parse_datetime(text,text)
+IS 'Convert a locale-formatted string into a timestamptz, using the default locale';
 
 /* Interface to udat_format().
    The calendar is typically set in the locale argument. */
 
-CREATE FUNCTION icu_format_date(
+CREATE FUNCTION icu_format_datetime(
  tstamp timestamptz,
  format text,
  locale text
 ) RETURNS text
-AS 'MODULE_PATHNAME', 'icu_format_date_locale'
+AS 'MODULE_PATHNAME', 'icu_format_datetime_locale'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
-COMMENT ON FUNCTION icu_format_date(timestamptz,text,text)
+COMMENT ON FUNCTION icu_format_datetime(timestamptz,text,text)
 IS 'Convert a time stamp into a string according to the given locale and format';
 
 
-CREATE FUNCTION icu_format_date(
+CREATE FUNCTION icu_format_datetime(
  tstamp timestamptz,
+ format text
+) RETURNS text
+AS 'MODULE_PATHNAME', 'icu_format_datetime_default_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+COMMENT ON FUNCTION icu_format_datetime(timestamptz,text)
+IS 'Convert a time stamp into a string according to the given format and default locale';
+
+CREATE FUNCTION icu_format_date(
+ input date,
+ format text,
+ locale text
+) RETURNS text
+AS 'MODULE_PATHNAME', 'icu_format_date_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE FUNCTION icu_format_date(
+ input date,
  format text
 ) RETURNS text
 AS 'MODULE_PATHNAME', 'icu_format_date_default_locale'
 LANGUAGE C STRICT STABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_format_date(timestamptz,text)
-IS 'Convert a time stamp into a string according to the given format and default locale';
 
 ---
 --- icu_date datatype
