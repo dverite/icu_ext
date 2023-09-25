@@ -22,6 +22,7 @@
 
 #include "unicode/ucnv.h"
 #include "unicode/ucol.h"
+#include "unicode/udat.h"
 #include "unicode/uloc.h"
 #include "unicode/umachine.h"
 #include "unicode/uscript.h"
@@ -46,6 +47,19 @@ PG_FUNCTION_INFO_V1(icu_sort_key);
 PG_FUNCTION_INFO_V1(icu_sort_key_coll);
 PG_FUNCTION_INFO_V1(icu_char_name);
 
+
+/*
+ * GUC parameters
+ */
+char *icu_ext_default_locale;
+char *icu_ext_date_format;
+char *icu_ext_timestamptz_format;
+/* Built-in ICU styles that are #define'd. See date_format_style() */
+UDateFormatStyle icu_ext_date_style = UDAT_DEFAULT;
+UDateFormatStyle icu_ext_timestamptz_style = UDAT_DEFAULT;
+
+
+void		_PG_init(void);
 
 Datum
 icu_version(PG_FUNCTION_ARGS)
@@ -884,4 +898,107 @@ icu_char_name(PG_FUNCTION_ARGS)
 		elog(ERROR, "u_charName failed: %s", u_errorName(status));
 	else
 		PG_RETURN_TEXT_P(cstring_to_text(buffer));
+}
+
+
+/*
+ * Convert {full|medium|...} into an UDateFormatStyle value, or UDAT_NONE
+ *  if not recognized
+ */
+UDateFormatStyle
+date_format_style(const char *fmt)
+{
+	UDateFormatStyle style = UDAT_NONE;
+	if (fmt[0] == '{') {
+		if (!strcmp(fmt+1, "short}"))
+			style = UDAT_SHORT;
+		else if (!strcmp(fmt+1, "medium}"))
+			style = UDAT_MEDIUM;
+		else if (!strcmp(fmt+1, "long}"))
+			style = UDAT_LONG;
+		else if (!strcmp(fmt+1, "full}"))
+			style  = UDAT_FULL;
+		if (!strcmp(fmt+1, "short relative}"))
+			style = UDAT_SHORT_RELATIVE;
+		else if (!strcmp(fmt+1, "medium relative}"))
+			style = UDAT_MEDIUM_RELATIVE;
+		else if (!strcmp(fmt+1, "long relative}"))
+			style = UDAT_LONG_RELATIVE;
+		else if (!strcmp(fmt+1, "full relative}"))
+			style  = UDAT_FULL_RELATIVE;
+	}
+	return style;
+}
+
+static void
+assign_guc_date_format(const char *newval, void *extra)
+{
+	if (*newval == '{')
+		icu_ext_date_style = date_format_style(newval);
+	else
+		icu_ext_date_style = UDAT_NONE;
+}
+
+static void
+assign_guc_timestamptz_format(const char *newval, void *extra)
+{
+	if (*newval == '{')
+		icu_ext_timestamptz_style = date_format_style(newval);
+	else
+		icu_ext_timestamptz_style = UDAT_NONE;
+}
+
+static bool
+check_guc_date_format(char **newval, void **extra, GucSource source)
+{
+	UDateFormatStyle style = UDAT_NONE;
+	if (**newval == '{')
+	{
+		style = date_format_style(*newval);
+		if (style == UDAT_NONE)
+			return false;
+	}
+	return true;
+}
+
+/*
+ * Module load callback
+ */
+void
+_PG_init(void)
+{
+	DefineCustomStringVariable("icu_ext.locale",
+							   "Sets the default locale to use by ICU functions.",
+							   NULL,
+							   &icu_ext_default_locale,
+							   NULL,
+							   PGC_USERSET,
+							   0,
+							   NULL,
+							   NULL,
+							   NULL);
+
+	DefineCustomStringVariable("icu_ext.date_format",
+							   "Sets the default input/output format for dates.",
+							   NULL,
+							   &icu_ext_date_format,
+							   "{medium}",
+							   PGC_USERSET,
+							   0,
+							   check_guc_date_format,
+							   assign_guc_date_format,
+							   NULL);
+
+	DefineCustomStringVariable("icu_ext.timestamptz_format",
+							   "Sets the default input/output format for timestamptz values.",
+							   NULL,
+							   &icu_ext_timestamptz_format,
+							   "{medium}",
+							   PGC_USERSET,
+							   0,
+							   check_guc_date_format,
+							   assign_guc_timestamptz_format,
+							   NULL);
+
+	EmitWarningsOnPlaceholders("icu_ext");
 }

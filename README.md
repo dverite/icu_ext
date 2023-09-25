@@ -2,7 +2,7 @@
 
 An extension to expose functionality from [ICU](https://icu.unicode.org/) to PostgreSQL applications.
 
-It requires PostgreSQL version 10 or newer, configured with ICU
+It requires PostgreSQL version 11 or newer, configured with ICU
 (--with-icu).
 
 Note: this text is in GitHub Flavored Markdown format. Please see the version
@@ -16,6 +16,12 @@ Build and install with:
 	$ make
 	$ (sudo) make install
 
+## Types
+
+See [README-datetime.md](README-datetime.md) for the date and time
+data types and functionalities.
+
+
 ## Functions
 
 ### Quick links (in alphabetical order)
@@ -26,11 +32,15 @@ Build and install with:
 [icu_confusable_strings_check](#icu_confusable_strings_check)  
 [icu_confusable_string_skeleton](#icu_confusable_string_skeleton)  
 [icu_default_locale](#icu_default_locale)  
+[icu_format_date](README-datetime.md#icu_format_date)  
+[icu_format_datetime](README-datetime.md#icu_format_datetime)  
 [icu_is_normalized](#icu_is_normalized)  
 [icu_line_boundaries](#icu_line_boundaries)  
 [icu_locales_list](#icu_locales_list)  
 [icu_normalize](#icu_normalize)  
 [icu_number_spellout](#icu_number_spellout)  
+[icu_parse_date](README-datetime.md#icu_parse_date)  
+[icu_parse_datetime](README-datetime.md#icu_parse_datetime)  
 [icu_replace](#icu_replace)  
 [icu_sentence_boundaries](#icu_sentence_boundaries)  
 [icu_set_default_locale](#icu_set_default_locale)  
@@ -308,6 +318,9 @@ backend with older versions of ICU (seen with 52.1).
 
 Returns the name of the default ICU locale as a text. The initial value
 is automatically set by ICU from the environment.
+
+For date and time localization, use the `icu_ext.locale` instead
+(see [README-datetime.md](README-datetime.md)).
 
 <a id="icu_character_boundaries"></a>
 ### icu_character_boundaries(`string` text, `locale` text)
@@ -742,8 +755,6 @@ Example:
 	  icu_is_normalized
 	 -------------------
 	  t
-
-
 
 ## License
 

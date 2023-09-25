@@ -134,17 +134,20 @@ In a night, or in a day,$$
 (31 rows)
 
 -- icu_number_spellout
+/* use the unaligned format for this test. With the aligned format,
+   there are environment-related differences in how psql computes
+   the width of strings containing U+00AD (soft hyphen) */
+\pset format unaligned
 SELECT loc, icu_number_spellout(1234, loc)
     FROM (values ('en'),('fr'),('de'),('ru'),('ja')) AS s(loc);
- loc |            icu_number_spellout            
------+-------------------------------------------
- en  | one thousand two hundred thirty-four
- fr  | mille deux cent trente-quatre
- de  | ein­tausend­zwei­hundert­vier­und­dreißig
- ru  | одна тысяча двести тридцать четыре
- ja  | 千二百三十四
+loc|icu_number_spellout
+en|one thousand two hundred thirty-four
+fr|mille deux cent trente-quatre
+de|ein­tausend­zwei­hundert­vier­und­dreißig
+ru|одна тысяча двести тридцать четыре
+ja|千二百三十四
 (5 rows)
-
+\pset format aligned
 -- icu_replace
 SELECT n,
    icu_replace(
