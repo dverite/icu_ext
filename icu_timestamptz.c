@@ -26,77 +26,13 @@
 
 #include "icu_ext.h"
 
-PG_FUNCTION_INFO_V1(icu_diff_timestamps);
-PG_FUNCTION_INFO_V1(icu_diff_timestamps_default_locale);
 PG_FUNCTION_INFO_V1(icu_timestamptz_in);
 PG_FUNCTION_INFO_V1(icu_timestamptz_out);
+PG_FUNCTION_INFO_V1(icu_date_to_ts);
+PG_FUNCTION_INFO_V1(icu_ts_to_date);
 
-
-Datum
-icu_diff_timestamps(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
-	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
-	/*
-	  delta interval,
-	  locale text
-	*/
-	long diff = TimestampDifferenceMilliseconds(pg_tstz1, pg_tstz2);
-	Interval *interv = (Interval*)palloc0(sizeof(Interval));
-	interv->time = diff*1000;	/* TimeOffset has units of microseconds */
-	/*
-	  fsec_t fsec = 0;
-	  tm2interval(&tm, fsec, &interv);
-	*/
-	PG_RETURN_INTERVAL_P(interv);
-}
-
-Datum
-icu_diff_timestamps_default_locale(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz1 = PG_GETARG_TIMESTAMPTZ(0);
-	TimestampTz pg_tstz2 = PG_GETARG_TIMESTAMPTZ(1);
-
-	Interval *interv = (Interval*)palloc0(sizeof(Interval));
-	interv->time = pg_tstz2 - pg_tstz1;	/* TimeOffset has units of microseconds */
-	PG_RETURN_INTERVAL_P(interv);
-}
-
-
-/* Convert a Postgres timestamp into an ICU timestamp */
-static UDate
-ts_to_udate(TimestampTz pg_tstz)
-{
-	/*
-	 *  ICU's UDate is a number of milliseconds since the Unix Epoch,
-	 *  (1970-01-01, 00:00 UTC), stored as a double.
-	 *  Postgres' TimestampTz is a number of microseconds since 2000-01-01 00:00 UTC,
-	 *  stored as an int64.
-	 * The code below translates directly between the epochs
-	 * Ideally these implementation details should not be relied upon here
-	 * but there doesn't seem to be a function udat_xxx() to set the date
-	 * from an epoch.
-	 * Alternatively we could extract the year/month/..etc.. fields from pg_tstz
-	 * and set them one by one in a gregorian calendar with ucal_set(cal, field, value),
-	 * and then obtain the UDate with ucal_getMillis(cal), but it would be slower.
-	 */
-
-	return (UDate)(10957.0*86400*1000 + pg_tstz/1000);
-}
-
-/* Convert an ICU timestamp into a Postgres timestamp */
-static TimestampTz
-udate_to_ts(const UDate ud)
-{
-	/*
-	 * Input: number of milliseconds since 1970-01-01 UTC
-	 * Output: number of microseconds since 2000-01-01 UTC
-	 * See the comment above in ts_to_udate about the translation
-	 */
-	return (TimestampTz)(ud*1000 - 10957LL*86400*1000*1000);
-}
-
-/* icu_timestamptz_out()
+/*
+ * icu_timestamptz_out()
  * Convert a timestamp to external form.
  */
 Datum
@@ -120,7 +56,7 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 	{
 		UErrorCode status = U_ZERO_ERROR;
 		UDateFormat* df = NULL;
-		UDate udate = ts_to_udate(dt);
+		UDate udate = TS_TO_UDATE(dt);
 		const char *locale = NULL;
 		UChar *output_pattern = NULL;
 		int32_t pattern_length = -1;
@@ -191,10 +127,10 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("timestamp out of range")));
-
 }
 
-/* icu_timestamptz_in()
+/*
+ * icu_timestamptz_in()
  * Convert a string to internal form.
  */
 Datum
@@ -264,6 +200,28 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 	if (U_FAILURE(status))
 		elog(ERROR, "udat_parse failed: %s\n", u_errorName(status));
 
-	PG_RETURN_TIMESTAMPTZ(udate_to_ts(udat));
+	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(udat));
 }
 
+/*
+ * Conversions between icu_timestamptz and icu_date are exactly the
+ * same as with the PG types timestamptz/date, since they share the
+ * same internal representation.
+ */
+Datum
+icu_date_to_ts(PG_FUNCTION_ARGS)
+{
+	return DirectFunctionCall2(date_timestamptz,
+							   PG_GETARG_DATUM(0),
+							   PG_GETARG_DATUM(1));
+
+}
+
+Datum
+icu_ts_to_date(PG_FUNCTION_ARGS)
+{
+	return DirectFunctionCall2(timestamptz_date,
+							   PG_GETARG_DATUM(0),
+							   PG_GETARG_DATUM(1));
+
+}

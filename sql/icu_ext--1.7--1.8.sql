@@ -3,111 +3,103 @@
 
 /* Interface to udat_parse().
    The calendar is typically set in the locale argument. */
-CREATE OR REPLACE FUNCTION icu_parse_date(
+CREATE FUNCTION icu_parse_date(
  date_string text,
  format text,
  locale text
-) RETURNS timestamptz
+) RETURNS date
 AS 'MODULE_PATHNAME', 'icu_parse_date_locale'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 /* Interface to udat_parse(), without the locale argument. */
-CREATE OR REPLACE FUNCTION icu_parse_date(
+CREATE FUNCTION icu_parse_date(
  date_string text,
  format text
-) RETURNS timestamptz
+) RETURNS date
 AS 'MODULE_PATHNAME', 'icu_parse_date_default_locale'
 LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 COMMENT ON FUNCTION icu_parse_date(text,text,text)
-IS 'Convert a locale-formatted date into a time stamp, using the supplied locale ';
+IS 'Convert a locale-formatted string into a date, using the supplied locale';
 
 COMMENT ON FUNCTION icu_parse_date(text,text)
-IS 'Convert a locale-formatted date into a time stamp';
+IS 'Convert a locale-formatted string into a date, using the default locale';
+
+CREATE FUNCTION icu_parse_datetime(
+ date_string text,
+ format text,
+ locale text
+) RETURNS timestamptz
+AS 'MODULE_PATHNAME', 'icu_parse_datetime_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+/* Interface to udat_parse(), without the locale argument. */
+CREATE FUNCTION icu_parse_datetime(
+ date_string text,
+ format text
+) RETURNS timestamptz
+AS 'MODULE_PATHNAME', 'icu_parse_datetime_default_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+COMMENT ON FUNCTION icu_parse_datetime(text,text,text)
+IS 'Convert a locale-formatted string into a timestamptz, using the supplied locale';
+
+COMMENT ON FUNCTION icu_parse_datetime(text,text)
+IS 'Convert a locale-formatted string into a timestamptz, using the default locale';
 
 /* Interface to udat_format().
    The calendar is typically set in the locale argument. */
 
-CREATE OR REPLACE FUNCTION icu_format_date(
+CREATE FUNCTION icu_format_datetime(
  tstamp timestamptz,
  format text,
  locale text
 ) RETURNS text
-AS 'MODULE_PATHNAME', 'icu_format_date_locale'
+AS 'MODULE_PATHNAME', 'icu_format_datetime_locale'
 LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
 
-COMMENT ON FUNCTION icu_format_date(timestamptz,text,text)
+COMMENT ON FUNCTION icu_format_datetime(timestamptz,text,text)
 IS 'Convert a time stamp into a string according to the given locale and format';
 
 
-CREATE OR REPLACE FUNCTION icu_format_date(
+CREATE FUNCTION icu_format_datetime(
  tstamp timestamptz,
+ format text
+) RETURNS text
+AS 'MODULE_PATHNAME', 'icu_format_datetime_default_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+COMMENT ON FUNCTION icu_format_datetime(timestamptz,text)
+IS 'Convert a time stamp into a string according to the given format and default locale';
+
+CREATE FUNCTION icu_format_date(
+ input date,
+ format text,
+ locale text
+) RETURNS text
+AS 'MODULE_PATHNAME', 'icu_format_date_locale'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE FUNCTION icu_format_date(
+ input date,
  format text
 ) RETURNS text
 AS 'MODULE_PATHNAME', 'icu_format_date_default_locale'
 LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
-COMMENT ON FUNCTION icu_format_date(timestamptz,text)
-IS 'Convert a time stamp into a string according to the given format and default locale';
-
-CREATE OR REPLACE FUNCTION icu_add_interval(
- tstamp timestamptz,
- delta interval
-) RETURNS timestamptz
-AS 'MODULE_PATHNAME', 'icu_add_interval_default_locale'
-LANGUAGE C STRICT STABLE PARALLEL SAFE;
-
-
-COMMENT ON FUNCTION icu_add_interval(timestamptz,interval)
-IS 'Add an interval to a timestamp using the calendar of the default locale';
-
-CREATE OR REPLACE FUNCTION icu_add_interval(
- tstamp timestamptz,
- delta interval,
- locale text
-) RETURNS timestamptz
-AS 'MODULE_PATHNAME', 'icu_add_interval'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_add_interval(timestamptz,interval)
-IS 'Add an interval to a timestamp using the calendar of the given locale';
-
-
-CREATE OR REPLACE FUNCTION icu_diff_timestamps(
- tstamp1 timestamptz,
- tstamp2 timestamptz
-) RETURNS interval
-AS 'MODULE_PATHNAME', 'icu_diff_timestamps_default_locale'
-LANGUAGE C STRICT STABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_diff_timestamps(timestamptz,timestamptz)
-IS 'Compute the difference between two dates in the calendar of the default locale';
-
-CREATE OR REPLACE FUNCTION icu_diff_timestamps(
- tstamp1 timestamptz,
- tstamp2 timestamptz,
- locale text
-) RETURNS interval
-AS 'MODULE_PATHNAME', 'icu_diff_timestamps'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
-
-COMMENT ON FUNCTION icu_diff_timestamps(timestamptz,timestamptz,text)
-IS 'Compute the difference between two dates according to the calendar of the given locale';
-
-
 ---
 --- icu_date datatype
 ---
 
-CREATE OR REPLACE FUNCTION icu_date_in(cstring)
+CREATE FUNCTION icu_date_in(cstring)
 RETURNS icu_date
 AS 'MODULE_PATHNAME', 'icu_date_in'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION icu_date_out(icu_date)
+CREATE FUNCTION icu_date_out(icu_date)
 RETURNS cstring
 AS 'MODULE_PATHNAME', 'icu_date_out'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 CREATE TYPE icu_date (
  INPUT = icu_date_in,
@@ -220,25 +212,18 @@ CREATE CAST (icu_date AS date) WITHOUT FUNCTION AS IMPLICIT;
 CREATE CAST (date AS icu_date) WITHOUT FUNCTION AS IMPLICIT;
 
 
-/*
-CREATE FUNCTION icu_timestamp_sub_interval(icu_timestamptz, icu_interval)
-RETURNS icu_timestamptz
-AS 'MODULE_PATHNAME', 'icu_timestamp_sub_interval'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
-*/
-
 ---
 --- icu_timestamptz datatype
 ---
 CREATE FUNCTION icu_timestamptz_in(cstring)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_timestamptz_in'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 CREATE FUNCTION icu_timestamptz_out(icu_timestamptz)
 RETURNS cstring
 AS 'MODULE_PATHNAME', 'icu_timestamptz_out'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 CREATE TYPE icu_timestamptz (
  INPUT = icu_timestamptz_in,
@@ -332,15 +317,15 @@ CREATE CAST (timestamptz AS icu_timestamptz) WITHOUT FUNCTION AS IMPLICIT;
 --
 -- icu_interval datatype
 ---
-CREATE OR REPLACE FUNCTION icu_interval_in(cstring)
+CREATE FUNCTION icu_interval_in(cstring)
 RETURNS icu_interval
 AS 'MODULE_PATHNAME', 'icu_interval_in'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION icu_interval_out(icu_interval)
+CREATE FUNCTION icu_interval_out(icu_interval)
 RETURNS cstring
 AS 'MODULE_PATHNAME', 'icu_interval_out'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 CREATE TYPE icu_interval (
  INPUT = icu_interval_in,
@@ -353,29 +338,58 @@ CREATE TYPE icu_interval (
 
 CREATE FUNCTION icu_from_interval (interval) RETURNS icu_interval
 AS 'MODULE_PATHNAME', 'icu_from_interval'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 CREATE CAST (interval AS icu_interval)
  WITH FUNCTION icu_from_interval(interval)
  AS IMPLICIT;
 
+
+--
+-- Non-implicit casts
+--
+CREATE FUNCTION icu_date_to_ts(icu_date) RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME', 'icu_date_to_ts'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE CAST (icu_date AS icu_timestamptz)
+ WITH FUNCTION icu_date_to_ts(icu_date)
+ AS ASSIGNMENT;
+
+CREATE FUNCTION icu_ts_to_date(icu_timestamptz) RETURNS icu_date
+AS 'MODULE_PATHNAME', 'icu_ts_to_date'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE CAST (icu_timestamptz AS icu_date)
+ WITH FUNCTION icu_ts_to_date(icu_timestamptz)
+ AS ASSIGNMENT;
+
+CREATE CAST (timestamptz AS icu_date)
+ WITH FUNCTION icu_ts_to_date(icu_timestamptz)
+ AS ASSIGNMENT;
+
+
+--
+-- Functions and operators combining types
+--
+
 /* icu_timestamptz plus icu_interval */
 CREATE FUNCTION icu_timestamptz_add_interval(icu_timestamptz, icu_interval)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_timestamptz_add_interval'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 /* icu_interval plus icu_timestamptz */
 CREATE FUNCTION icu_interval_add_timestamptz(icu_interval, icu_timestamptz)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_interval_add_timestamptz'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 /* icu_timestamptz minus icu_interval */
 CREATE FUNCTION icu_timestamptz_sub_interval(icu_timestamptz, icu_interval)
 RETURNS icu_timestamptz
 AS 'MODULE_PATHNAME', 'icu_timestamptz_sub_interval'
-LANGUAGE C STRICT IMMUTABLE PARALLEL SAFE;
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
 
 /* icu_interval multiplied by integer */
 CREATE FUNCTION icu_interval_mul(icu_interval, int)
@@ -446,5 +460,28 @@ CREATE OPERATOR + (
 CREATE OPERATOR - (
  PROCEDURE = icu_interv_minus_interv,
  LEFTARG = icu_interval,
+ RIGHTARG = icu_interval
+);
+
+CREATE FUNCTION icu_date_plus_interval(icu_date, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE FUNCTION icu_date_minus_interval(icu_date, icu_interval)
+RETURNS icu_timestamptz
+AS 'MODULE_PATHNAME'
+LANGUAGE C STRICT STABLE PARALLEL SAFE;
+
+CREATE OPERATOR + (
+ PROCEDURE = icu_date_plus_interval,
+ LEFTARG = icu_date,
+ RIGHTARG = icu_interval,
+ COMMUTATOR = +
+);
+
+CREATE OPERATOR - (
+ PROCEDURE = icu_date_minus_interval,
+ LEFTARG = icu_date,
  RIGHTARG = icu_interval
 );

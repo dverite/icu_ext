@@ -27,9 +27,6 @@
 
 #include "icu_ext.h"
 
-PG_FUNCTION_INFO_V1(icu_add_interval);
-PG_FUNCTION_INFO_V1(icu_add_interval_default_locale);
-
 PG_FUNCTION_INFO_V1(icu_interval_in);
 PG_FUNCTION_INFO_V1(icu_interval_out);
 PG_FUNCTION_INFO_V1(icu_from_interval);
@@ -41,38 +38,6 @@ PG_FUNCTION_INFO_V1(icu_mul_i_interval);
 PG_FUNCTION_INFO_V1(icu_interv_plus_interv);
 PG_FUNCTION_INFO_V1(icu_interv_minus_interv);
 
-/* Convert a Postgres timestamp into an ICU timestamp */
-static UDate
-ts_to_udate(TimestampTz pg_tstz)
-{
-	/*
-	 *  ICU's UDate is a number of milliseconds since the Unix Epoch,
-	 *  (1970-01-01, 00:00 UTC), stored as a double.
-	 *  Postgres' TimestampTz is a number of microseconds since 2000-01-01 00:00 UTC,
-	 *  stored as an int64.
-	 * The code below translates directly between the epochs
-	 * Ideally these implementation details should not be relied upon here
-	 * but there doesn't seem to be a function udat_xxx() to set the date
-	 * from an epoch.
-	 * Alternatively we could extract the year/month/..etc.. fields from pg_tstz
-	 * and set them one by one in a gregorian calendar with ucal_set(cal, field, value),
-	 * and then obtain the UDate with ucal_getMillis(cal), but it would be slower.
-	 */
-
-	return (UDate)(10957.0*86400*1000 + pg_tstz/1000);
-}
-
-/* Convert an ICU timestamp into a Postgres timestamp */
-static TimestampTz
-udate_to_ts(const UDate ud)
-{
-	/*
-	 * Input: number of milliseconds since 1970-01-01 UTC
-	 * Output: number of microseconds since 2000-01-01 UTC
-	 * See the comment above in ts_to_udate about the translation
-	 */
-	return (TimestampTz)(ud*1000 - 10957LL*86400*1000*1000);
-}
 
 /*
  * Add an interval to a timestamp with timezone, given a localized calendar.
@@ -83,11 +48,18 @@ Datum
 add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 {
 	UErrorCode status = U_ZERO_ERROR;
-	UDate date_time = ts_to_udate(ts);
+	UDate date_time = TS_TO_UDATE(ts);
 	UCalendar *ucal;
+	UChar* tzid;
+	int32_t tzid_length;
+	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
-	ucal = ucal_open(NULL, /* default zoneID */
-					 0,
+	tzid_length = icu_to_uchar(&tzid,
+							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
+							   strlen(pg_tz_name));
+
+	ucal = ucal_open(tzid,
+					 tzid_length,
 					 locale,
 					 UCAL_DEFAULT,
 					 &status);
@@ -120,36 +92,7 @@ add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 		elog(ERROR, "calendar translation failed: %s\n", u_errorName(status));
 	}
 
-	PG_RETURN_TIMESTAMPTZ(udate_to_ts(date_time));
-}
-
-Datum
-icu_add_interval(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
-	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
-	const char *locale = text_to_cstring(PG_GETARG_TEXT_PP(2));
-	icu_interval_t ival;
-
-	ival.time = pg_interval->time;
-	ival.day = pg_interval->day;
-	ival.month = pg_interval->month;
-	ival.year = 0;
-	return add_interval(pg_tstz, &ival, locale);
-}
-
-Datum
-icu_add_interval_default_locale(PG_FUNCTION_ARGS)
-{
-	TimestampTz pg_tstz = PG_GETARG_TIMESTAMPTZ(0);
-	Interval *pg_interval = PG_GETARG_INTERVAL_P(1);
-	icu_interval_t ival;
-
-	ival.time = pg_interval->time;
-	ival.day = pg_interval->day;
-	ival.month = pg_interval->month;
-	ival.year = 0;
-	return add_interval(pg_tstz, &ival, NULL);
+	PG_RETURN_TIMESTAMPTZ(UDATE_TO_TS(date_time));
 }
 
 Datum
@@ -384,7 +327,5 @@ icu_interv_minus_interv(PG_FUNCTION_ARGS)
 TODO:
 - binary
 - cast from icu_interval to interval?
-- explicit cast from timestamptz to icu_date?
-- cast from icu_timestamptz to icu_date?
 - justify_interval?
 */
