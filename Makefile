@@ -21,7 +21,7 @@ include $(PGXS)
 override CFLAGS += -g  # added with PG16 built with meson. Not sure it should be kept.
 
 dist:
-	tar cjf $(EXTENSION)-$(EXTVERSION).tar.bz2 Makefile icu_ext.control *.c *.h sql/ expected/
+	tar cjf $(EXTENSION)-$(EXTVERSION).tar.bz2 Makefile META.json icu_ext.control *.md *.c *.h sql/ expected/ META.json
 
 .PHONY: dist
 
