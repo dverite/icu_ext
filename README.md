@@ -26,6 +26,7 @@ data types and functionalities.
 
 ### Quick links (in alphabetical order)
 [icu_char_name](#icu_char_name)  
+[icu_char_type](#icu_char_type)  
 [icu_character_boundaries](#icu_character_boundaries)  
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
@@ -538,6 +539,26 @@ Example:
       i | 69     | LATIN SMALL LETTER I
       ñ | f1     | LATIN SMALL LETTER N WITH TILDE
       o | 6f     | LATIN SMALL LETTER O
+
+<a id="icu_char_type"></a>
+### icu_char_type(`c` character)
+Example:
+
+    =# SELECT c, to_hex(ascii(c)), icu_char_type(c)
+       FROM regexp_split_to_table('Area 51', '') as c;
+
+	 c | to_hex | icu_char_type 
+	---+--------+---------------
+	 A | 41     | Lu
+	 r | 72     | Ll
+	 e | 65     | Ll
+	 a | 61     | Ll
+	   | 20     | Zs
+	 5 | 35     | Nd
+	 1 | 31     | Nd
+
+
+Return the Unicode [General Category](https://www.unicode.org/reports/tr44/#General_Category_Values) property corresponding to the first codepoint of the input.
 
 
 <a id="icu_spoof_check"></a>

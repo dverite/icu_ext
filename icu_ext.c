@@ -43,6 +43,7 @@ PG_FUNCTION_INFO_V1(icu_case_compare);
 PG_FUNCTION_INFO_V1(icu_sort_key);
 PG_FUNCTION_INFO_V1(icu_sort_key_coll);
 PG_FUNCTION_INFO_V1(icu_char_name);
+PG_FUNCTION_INFO_V1(icu_char_type);
 
 
 /*
@@ -55,6 +56,17 @@ char *icu_ext_timestamptz_format;
 UDateFormatStyle icu_ext_date_style = UDAT_DEFAULT;
 UDateFormatStyle icu_ext_timestamptz_style = UDAT_DEFAULT;
 
+static const char* general_category_types[] = {
+	"Cn",
+	"Lu", "Ll", "Lt", "Lm", "Lo",
+	"Mn", "Me", "Mc",
+	"Nd", "Nl", "No",
+	"Zs", "Zl", "Zp",
+	"Cc", "Cf", "Co", "Cs",
+	"Pd", "Ps", "Pe", "Pc", "Po",
+	"Sm", "Sc", "Sk", "So",
+	"Pi", "Pf"
+};
 
 void		_PG_init(void);
 
@@ -858,7 +870,7 @@ first_char32(BpChar* source)
 }
 
 /*
- * Return the Unicode name corresponding to the the input character.
+ * Return the Unicode name corresponding to the input character.
  */
 Datum
 icu_char_name(PG_FUNCTION_ARGS)
@@ -896,6 +908,31 @@ icu_char_name(PG_FUNCTION_ARGS)
 	else
 		PG_RETURN_TEXT_P(cstring_to_text(buffer));
 }
+
+/*
+ * Return the Unicode general category type of the input's code point
+ */
+Datum
+icu_char_type(PG_FUNCTION_ARGS)
+{
+	BpChar *source = PG_GETARG_BPCHAR_PP(0);
+	UChar32 first_char;
+	int8_t char_type;
+
+	first_char = first_char32(source);
+	char_type = u_charType(first_char);
+
+	if (char_type >= 0 && char_type < sizeof(general_category_types)/sizeof(general_category_types[0]))
+	{
+		PG_RETURN_TEXT_P(cstring_to_text(general_category_types[char_type]));
+	}
+	else
+	{
+		elog(ERROR, "unexpected return value of u_charType for codepoint: 0x%lx",
+			 (unsigned long)first_char);
+	}
+}
+
 
 
 /*
