@@ -7,8 +7,10 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
+#include "icu_ext.h"
+
 /* Postgres includes */
-#include "postgres.h"
+
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"
@@ -19,7 +21,6 @@
 /* ICU includes */
 #include "unicode/unorm.h"
 
-#include "icu_ext.h"
 
 PG_FUNCTION_INFO_V1(icu_is_normalized);
 PG_FUNCTION_INFO_V1(icu_normalize);

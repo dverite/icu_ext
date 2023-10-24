@@ -7,9 +7,10 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
-#include "postgres.h"
+
+#include "icu_ext.h"
+
 #include "access/htup_details.h"
-#include "fmgr.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"

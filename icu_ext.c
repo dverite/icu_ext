@@ -7,10 +7,9 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
-#include "postgres.h"
+#include "icu_ext.h"
 
 #include "catalog/pg_collation.h"
-#include "fmgr.h"
 #include "funcapi.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
@@ -29,8 +28,6 @@
 #include "unicode/ustring.h"
 #include "unicode/utext.h"
 #include "unicode/uvernum.h"
-
-#include "icu_ext.h"
 
 PG_MODULE_MAGIC;
 

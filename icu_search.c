@@ -7,9 +7,9 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
+#include "icu_ext.h"
+
 /* Postgres includes */
-#include "postgres.h"
-#include "fmgr.h"
 #include "funcapi.h"
 #include "lib/stringinfo.h"
 #include "mb/pg_wchar.h"
@@ -20,8 +20,6 @@
 /* ICU includes */
 #include "unicode/ucol.h"
 #include "unicode/usearch.h"
-
-#include "icu_ext.h"
 
 PG_FUNCTION_INFO_V1(icu_strpos);
 PG_FUNCTION_INFO_V1(icu_strpos_coll);

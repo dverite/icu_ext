@@ -7,8 +7,8 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
-#include "postgres.h"
-#include "fmgr.h"
+#include "icu_ext.h"
+
 #include "funcapi.h"
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"

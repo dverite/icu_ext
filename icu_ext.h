@@ -8,7 +8,9 @@
  */
 
 #include "postgres.h"
+#include "fmgr.h"
 #include "datatype/timestamp.h"
+
 #include "unicode/ucol.h"
 #include "unicode/udat.h"
 

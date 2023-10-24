@@ -7,24 +7,22 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
+#include "icu_ext.h"
+
 /* Postgres includes */
-#include "postgres.h"
-#include "fmgr.h"
 #include "funcapi.h"
 #include "pgtime.h"
 #include "utils/builtins.h"
-#include "utils/timestamp.h"
-#include "utils/pg_locale.h"
 #include "utils/date.h"
 #include "utils/datetime.h"
+#include "utils/timestamp.h"
+#include "utils/pg_locale.h"
 
 /* ICU includes */
 #include "unicode/ucal.h"
 #include "unicode/udat.h"
 #include "unicode/ustring.h"
 
-
-#include "icu_ext.h"
 
 PG_FUNCTION_INFO_V1(icu_format_date_locale);
 PG_FUNCTION_INFO_V1(icu_format_date_default_locale);

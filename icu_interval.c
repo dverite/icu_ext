@@ -7,9 +7,9 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
+#include "icu_ext.h"
+
 /* Postgres includes */
-#include "postgres.h"
-#include "fmgr.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "common/int.h"
@@ -24,8 +24,6 @@
 #include "unicode/ucnv.h"  /* needed? */
 #include "unicode/udat.h"
 #include "unicode/ustring.h"
-
-#include "icu_ext.h"
 
 PG_FUNCTION_INFO_V1(icu_interval_in);
 PG_FUNCTION_INFO_V1(icu_interval_out);

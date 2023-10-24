@@ -7,9 +7,9 @@
  * By Daniel Vérité, 2018-2023. See LICENSE.md
  */
 
+#include "icu_ext.h"
+
 /* Postgres includes */
-#include "postgres.h"
-#include "fmgr.h"
 #include "funcapi.h"
 #include "pgtime.h"
 #include "utils/builtins.h"
@@ -22,9 +22,6 @@
 #include "unicode/ucal.h"
 #include "unicode/udat.h"
 #include "unicode/ustring.h"
-
-
-#include "icu_ext.h"
 
 PG_FUNCTION_INFO_V1(icu_timestamptz_in);
 PG_FUNCTION_INFO_V1(icu_timestamptz_out);
