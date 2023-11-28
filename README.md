@@ -27,6 +27,7 @@ data types and functionalities.
 ### Quick links (in alphabetical order)
 [icu_char_name](#icu_char_name)  
 [icu_char_type](#icu_char_type)  
+[icu_char_ublock_id](#icu_char_ublock_id)  
 [icu_character_boundaries](#icu_character_boundaries)  
 [icu_collation_attributes](#icu_collation_attributes)  
 [icu_compare](#icu_compare)  
@@ -50,6 +51,7 @@ data types and functionalities.
 [icu_strpos](#icu_strpos)  
 [icu_transform](#icu_transform)  
 [icu_transforms_list](#icu_transforms_list)  
+[icu_unicode_blocks](#icu_unicode_blocks)  
 [icu_unicode_version](#icu_unicode_version)  
 [icu_version](#icu_version)  
 [icu_word_boundaries](#icu_word_boundaries)  
@@ -542,6 +544,11 @@ Example:
 
 <a id="icu_char_type"></a>
 ### icu_char_type(`c` character)
+
+Return the Unicode [General
+Category](https://www.unicode.org/reports/tr44/#General_Category_Values)
+property corresponding to the first codepoint of the input.
+
 Example:
 
     =# SELECT c, to_hex(ascii(c)), icu_char_type(c)
@@ -558,8 +565,54 @@ Example:
 	 1 | 31     | Nd
 
 
-Return the Unicode [General Category](https://www.unicode.org/reports/tr44/#General_Category_Values) property corresponding to the first codepoint of the input.
 
+<a id="icu_char_ublock_id"></a>
+### icu_char_ublock_id (`c` character)
+Return a numerical ID (`smallint`) corresponding to the Unicode block of the given code point.
+The ID can be matched against the `block_id` column of the set returned by
+`icu_unicode_blocks()`. Return 0 if the code point is not assigned.
+
+Example:
+```
+=# WITH frequency AS (select icu_char_ublock_id(c) as id, count(*)
+     FROM regexp_split_to_table(U&'Voilà l''été \+01F603','') as c GROUP BY 1)
+   SELECT block_name,count FROM icu_unicode_blocks() JOIN frequency
+     ON (block_id=frequency.id)
+   ORDER BY block_id;
+
+     block_name     | count
+--------------------+-------
+ Basic_Latin        |     9
+ Latin_1_Supplement |     3
+ Emoticons          |     1
+```
+
+<a id="icu_unicode_blocks"></a>
+### icu_unicode_blocks ()
+
+Return the list of Unicode blocks with their internal ID, including 0
+for a pseudo-block of non-assigned code points.
+This list corresponds in the ICU library to the "long name" property
+for each block numbered 0 to `UBLOCK_COUNT`.
+
+Example:
+```
+=# SELECT * FROM icu_unicode_blocks()
+    WHERE block_id BETWEEN 0 AND 5 OR block_id >= 316;
+ block_id |                    block_name
+----------+--------------------------------------------------
+        0 | No_Block
+        1 | Basic_Latin
+        2 | Latin_1_Supplement
+        3 | Latin_Extended_A
+        4 | Latin_Extended_B
+        5 | IPA_Extensions
+      316 | Tangsa
+      317 | Toto
+      318 | Unified_Canadian_Aboriginal_Syllabics_Extended_A
+      319 | Vithkuqi
+      320 | Znamenny_Musical_Notation
+```
 
 <a id="icu_spoof_check"></a>
 ### icu_spoof_check (`string` text)

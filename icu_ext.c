@@ -44,6 +44,8 @@ PG_FUNCTION_INFO_V1(icu_sort_key);
 PG_FUNCTION_INFO_V1(icu_sort_key_coll);
 PG_FUNCTION_INFO_V1(icu_char_name);
 PG_FUNCTION_INFO_V1(icu_char_type);
+PG_FUNCTION_INFO_V1(icu_char_ublock_id);
+PG_FUNCTION_INFO_V1(icu_unicode_blocks);
 
 
 /*
@@ -933,7 +935,81 @@ icu_char_type(PG_FUNCTION_ARGS)
 	}
 }
 
+/*
+ * Return the Unicode block number (ICU UBlockCode enum) of the
+ * input's code point.
+ */
+Datum
+icu_char_ublock_id(PG_FUNCTION_ARGS)
+{
+	BpChar *source = PG_GETARG_BPCHAR_PP(0);
+	UChar32 first_char;
+	UBlockCode block_id;
 
+	first_char = first_char32(source);
+	block_id = ublock_getCode(first_char);
+
+	PG_RETURN_INT16((int16)block_id);
+}
+
+/*
+ * Return the list of Unicode blocks with their internal ID in ICU
+ * (UBlockCode enum, matching the return values of
+ * icu_char_ublock_id()), and the block names.
+ */
+Datum
+icu_unicode_blocks(PG_FUNCTION_ARGS)
+{
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	MemoryContext per_query_ctx;
+	MemoryContext oldcontext;
+	TupleDesc	tupdesc;
+	Tuplestorestate *tupstore;
+	Datum values[2];
+	bool nulls[2];
+
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("set-valued function called in context that cannot accept a set")));
+
+	/* Switch into long-lived context to construct returned data structures */
+	per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+	oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+	/* Build a tuple descriptor for our result type */
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
+
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+
+	MemoryContextSwitchTo(oldcontext);
+
+	memset(nulls, 0, sizeof(nulls));
+
+	for (int16 nblock = (int16)UBLOCK_NO_BLOCK ;
+		 nblock < (int16)UBLOCK_COUNT;
+		 nblock++)
+	{
+		const char* block_name =
+			u_getPropertyValueName(UCHAR_BLOCK,
+								   nblock,
+								   U_LONG_PROPERTY_NAME);
+		if (block_name != NULL)
+		{
+			values[0] = Int16GetDatum(nblock);
+			values[1] = CStringGetTextDatum(block_name);
+			tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+		}
+		/* else nblock is out of range */
+	}
+
+	tuplestore_donestoring(tupstore);
+	return (Datum) 0;
+}
 
 /*
  * Convert {full|medium|...} into an UDateFormatStyle value, or UDAT_NONE
