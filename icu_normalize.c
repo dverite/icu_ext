@@ -138,7 +138,7 @@ icu_normalize(PG_FUNCTION_ARGS)
 Datum
 icu_is_normalized(PG_FUNCTION_ARGS)
 {
-    text *src_text = PG_GETARG_TEXT_PP(0);
+	text *src_text = PG_GETARG_TEXT_PP(0);
 	const char* arg_form = text_to_cstring(PG_GETARG_TEXT_PP(1));
 	norm_form_t form = name_to_norm(arg_form);
 	UErrorCode	status = U_ZERO_ERROR;

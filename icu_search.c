@@ -163,7 +163,7 @@ internal_strpos(text *txt1, text *txt2, UCollator *collator)
 Datum
 icu_strpos(PG_FUNCTION_ARGS)
 {
-    UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
+	UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
 
 	PG_RETURN_INT32(internal_strpos(PG_GETARG_TEXT_PP(0), /* haystack */
 									PG_GETARG_TEXT_PP(1), /* needle */
@@ -351,7 +351,7 @@ internal_str_replace(text *txt1, /* not const because it may be returned */
 Datum
 icu_replace(PG_FUNCTION_ARGS)
 {
-    UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
+	UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
 	text *string;
 
 	string = internal_str_replace(

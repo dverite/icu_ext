@@ -767,7 +767,7 @@ Datum
 icu_sort_key(PG_FUNCTION_ARGS)
 {
 	text *txt = PG_GETARG_TEXT_PP(0);
-    UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
+	UCollator *collator = ucollator_from_coll_id(PG_GET_COLLATION());
 	int32_t o_len = 1024;		/* first attempt */
 	int32_t ulen;
 	UChar *ustring;
