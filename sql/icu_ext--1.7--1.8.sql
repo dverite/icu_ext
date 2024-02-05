@@ -158,7 +158,7 @@ CREATE OPERATOR > (
  PROCEDURE = icu_date_gt,
  LEFTARG = icu_date,
  RIGHTARG = icu_date,
- NEGATOR = '=',
+ NEGATOR = '<=',
  HASHES, MERGES
 );
 
@@ -166,7 +166,7 @@ CREATE OPERATOR >= (
  PROCEDURE = icu_date_ge,
  LEFTARG = icu_date,
  RIGHTARG = icu_date,
- NEGATOR = '=',
+ NEGATOR = '<',
  HASHES, MERGES
 );
 
@@ -174,7 +174,7 @@ CREATE OPERATOR < (
  PROCEDURE = icu_date_lt,
  LEFTARG = icu_date,
  RIGHTARG = icu_date,
- NEGATOR = '=',
+ NEGATOR = '>=',
  HASHES, MERGES
 );
 
@@ -182,7 +182,7 @@ CREATE OPERATOR <= (
  PROCEDURE = icu_date_le,
  LEFTARG = icu_date,
  RIGHTARG = icu_date,
- NEGATOR = '=',
+ NEGATOR = '>',
  HASHES, MERGES
 );
 
@@ -272,7 +272,7 @@ CREATE OPERATOR > (
  PROCEDURE = icu_timestamptz_gt,
  LEFTARG = icu_timestamptz,
  RIGHTARG = icu_timestamptz,
- NEGATOR = '=',
+ NEGATOR = '<=',
  HASHES, MERGES
 );
 
@@ -280,7 +280,7 @@ CREATE OPERATOR >= (
  PROCEDURE = icu_timestamptz_ge,
  LEFTARG = icu_timestamptz,
  RIGHTARG = icu_timestamptz,
- NEGATOR = '=',
+ NEGATOR = '<',
  HASHES, MERGES
 );
 
@@ -288,7 +288,7 @@ CREATE OPERATOR < (
  PROCEDURE = icu_timestamptz_lt,
  LEFTARG = icu_timestamptz,
  RIGHTARG = icu_timestamptz,
- NEGATOR = '=',
+ NEGATOR = '>=',
  HASHES, MERGES
 );
 
@@ -296,7 +296,7 @@ CREATE OPERATOR <= (
  PROCEDURE = icu_timestamptz_le,
  LEFTARG = icu_timestamptz,
  RIGHTARG = icu_timestamptz,
- NEGATOR = '=',
+ NEGATOR = '>',
  HASHES, MERGES
 );
 
