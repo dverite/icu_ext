@@ -425,7 +425,6 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
-	tuplestore_donestoring(tupstore);
 	ucol_close(collator);
 
 	return (Datum) 0;
@@ -569,7 +568,6 @@ icu_locales_list(PG_FUNCTION_ARGS)
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
-	tuplestore_donestoring(tupstore);
 	return (Datum) 0;
 }
 
@@ -1007,7 +1005,6 @@ icu_unicode_blocks(PG_FUNCTION_ARGS)
 		/* else nblock is out of range */
 	}
 
-	tuplestore_donestoring(tupstore);
 	return (Datum) 0;
 }
 
