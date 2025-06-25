@@ -72,6 +72,137 @@ static const char* general_category_types[] = {
 
 void		_PG_init(void);
 
+/*
+ * Converter object for converting between ICU's UChar strings and C strings
+ * in database encoding.  Since the database encoding doesn't change, we only
+ * need one of these per session.
+ */
+static UConverter *icu_converter = NULL;
+
+static void
+init_icu_converter(void)
+{
+	const char *icu_encoding_name;
+	UErrorCode	status;
+	UConverter *conv;
+
+	if (icu_converter)
+		return;					/* already done */
+
+	icu_encoding_name = get_encoding_name_for_icu(GetDatabaseEncoding());
+	if (!icu_encoding_name)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("encoding \"%s\" not supported by ICU",
+						pg_encoding_to_char(GetDatabaseEncoding()))));
+
+	status = U_ZERO_ERROR;
+	conv = ucnv_open(icu_encoding_name, &status);
+	if (U_FAILURE(status))
+		ereport(ERROR,
+				(errmsg("could not open ICU converter for encoding \"%s\": %s",
+						icu_encoding_name, u_errorName(status))));
+
+	icu_converter = conv;
+}
+
+/*
+ * Find length, in UChars, of given string if converted to UChar string.
+ *
+ * A length of -1 indicates that the input string is NUL-terminated.
+ */
+static size_t
+uchar_length(UConverter *converter, const char *str, int32_t len)
+{
+	UErrorCode	status = U_ZERO_ERROR;
+	int32_t		ulen;
+
+	ulen = ucnv_toUChars(converter, NULL, 0, str, len, &status);
+	if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR)
+		ereport(ERROR,
+				(errmsg("%s failed: %s", "ucnv_toUChars", u_errorName(status))));
+	return ulen;
+}
+
+
+/*
+ * Convert a string in the database encoding into a string of UChars.
+ *
+ * The source string at buff is of length nbytes
+ * (it needn't be nul-terminated)
+ *
+ * *buff_uchar receives a pointer to the palloc'd result string, and
+ * the function's result is the number of UChars generated.
+ *
+ * The result string is nul-terminated, though most callers rely on the
+ * result length instead.
+ */
+int32_t
+string_to_uchar(UChar **buff_uchar, const char *buff, size_t nbytes)
+{
+	UErrorCode	status = U_ZERO_ERROR;
+	int32_t		len_uchar;
+
+	init_icu_converter();
+
+	len_uchar = uchar_length(icu_converter, buff, nbytes);
+
+	*buff_uchar = palloc((len_uchar + 1) * sizeof(**buff_uchar));
+
+	len_uchar = ucnv_toUChars(icu_converter,
+							  *buff_uchar,
+							  len_uchar+1,
+							  buff,
+							  nbytes,
+							  &status);
+	if (U_FAILURE(status))
+		ereport(ERROR,
+				(errmsg("%s failed: %s", "ucnv_toUChars", u_errorName(status))));
+
+	return len_uchar;
+}
+
+/*
+ * Convert a string of UChars into the database encoding.
+ *
+ * The source string at buff_uchar is of length len_uchar
+ * (it needn't be nul-terminated)
+ *
+ * *result receives a pointer to the palloc'd result string, and the
+ * function's result is the number of bytes generated (not counting nul).
+ *
+ * The result string is nul-terminated.
+ */
+int32_t
+string_from_uchar(char **result, const UChar *buff_uchar, int32_t len_uchar)
+{
+	UErrorCode	status;
+	int32_t		len_result;
+
+	init_icu_converter();
+
+	status = U_ZERO_ERROR;
+	len_result = ucnv_fromUChars(icu_converter, NULL, 0,
+								 buff_uchar, len_uchar, &status);
+	if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR)
+		ereport(ERROR,
+				(errmsg("%s failed: %s", "ucnv_fromUChars",
+						u_errorName(status))));
+
+	*result = palloc(len_result + 1);
+
+	status = U_ZERO_ERROR;
+	len_result = ucnv_fromUChars(icu_converter, *result, len_result + 1,
+								 buff_uchar, len_uchar, &status);
+	if (U_FAILURE(status) ||
+		status == U_STRING_NOT_TERMINATED_WARNING)
+		ereport(ERROR,
+				(errmsg("%s failed: %s", "ucnv_fromUChars",
+						u_errorName(status))));
+
+	return len_result;
+}
+
 Datum
 icu_version(PG_FUNCTION_ARGS)
 {
@@ -191,7 +322,7 @@ icu_collation_attributes(PG_FUNCTION_ARGS)
 		if (U_FAILURE(status))
 			elog(ERROR, "uloc_getDisplayName failed: %s", u_errorName(status));
 
-		icu_from_uchar(&buf, dname, ulen);
+		string_from_uchar(&buf, dname, ulen);
 
 		values[0] = CStringGetTextDatum("displayname");
 		values[1] = CStringGetTextDatum(buf);
@@ -504,7 +635,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 			if (U_FAILURE(status))
 				elog(ERROR, "uloc_getDisplayCountry() failed on locale '%s': %s",
 					 p, u_errorName(status));
-			icu_from_uchar(&country, country_buf, u_strlen(country_buf));
+			string_from_uchar(&country, country_buf, u_strlen(country_buf));
 			col_num = add_string(country, col_num, values, nulls);
 		}
 
@@ -520,7 +651,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 			if (U_FAILURE(status))
 				elog(ERROR, "uloc_getDisplayLanguage() failed on locale '%s': %s",
 					 p, u_errorName(status));
-			icu_from_uchar(&language, lang_buf, u_strlen(lang_buf));
+			string_from_uchar(&language, lang_buf, u_strlen(lang_buf));
 			col_num = add_string(language, col_num, values, nulls);
 		}
 
@@ -536,7 +667,7 @@ icu_locales_list(PG_FUNCTION_ARGS)
 			if (U_FAILURE(status))
 				elog(ERROR, "uloc_getDisplayScript() failed on locale '%s': %s",
 					 p, u_errorName(status));
-			icu_from_uchar(&script, script_buf, u_strlen(script_buf));
+			string_from_uchar(&script, script_buf, u_strlen(script_buf));
 			col_num = add_string(script, col_num, values, nulls);
 		}
 
@@ -674,8 +805,8 @@ our_strcoll(text *txt1, text *txt2, UCollator *collator )
 		int32_t ulen1, ulen2;
 		UChar *uchar1, *uchar2;
 
-		ulen1 = icu_to_uchar(&uchar1, text_to_cstring(txt1), len1);
-		ulen2 = icu_to_uchar(&uchar2, text_to_cstring(txt2), len2);
+		ulen1 = string_to_uchar(&uchar1, text_to_cstring(txt1), len1);
+		ulen2 = string_to_uchar(&uchar2, text_to_cstring(txt2), len2);
 
 		result = ucol_strcoll(collator,
 							  uchar1, ulen1,
@@ -746,8 +877,8 @@ icu_case_compare(PG_FUNCTION_ARGS)
 	int32_t result;
 	UChar *uchar1, *uchar2;
 
-	(void)icu_to_uchar(&uchar1, text_to_cstring(txt1), len1);
-	(void)icu_to_uchar(&uchar2, text_to_cstring(txt2), len2);
+	(void)string_to_uchar(&uchar1, text_to_cstring(txt1), len1);
+	(void)string_to_uchar(&uchar2, text_to_cstring(txt2), len2);
 
 	result = u_strcasecmp(uchar1, uchar2, 0);
 
@@ -772,7 +903,7 @@ icu_sort_key(PG_FUNCTION_ARGS)
 	bytea *output;
 
 
-	ulen = icu_to_uchar(&ustring, VARDATA_ANY(txt), VARSIZE_ANY_EXHDR(txt));
+	ulen = string_to_uchar(&ustring, VARDATA_ANY(txt), VARSIZE_ANY_EXHDR(txt));
 
 	do
 	{
@@ -815,7 +946,7 @@ icu_sort_key_coll(PG_FUNCTION_ARGS)
 	UChar *ustring;
 	bytea *output;
 
-	ulen = icu_to_uchar(&ustring, VARDATA_ANY(txt), VARSIZE_ANY_EXHDR(txt));
+	ulen = string_to_uchar(&ustring, VARDATA_ANY(txt), VARSIZE_ANY_EXHDR(txt));
 
 	collator = ucol_open(locname, &status);
 	if (!collator)
@@ -859,7 +990,7 @@ first_char32(BpChar* source)
 	UChar *ustring;
 	UErrorCode status = U_ZERO_ERROR;
 
-	ulen = icu_to_uchar(&ustring, VARDATA_ANY(source), VARSIZE_ANY_EXHDR(source));
+	ulen = string_to_uchar(&ustring, VARDATA_ANY(source), VARSIZE_ANY_EXHDR(source));
 
 	ut = utext_openUChars(NULL, ustring, ulen, &status);
 	if (U_FAILURE(status))

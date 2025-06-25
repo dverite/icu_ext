@@ -103,7 +103,7 @@ icu_transform(PG_FUNCTION_ARGS)
 
 	if (utrans == NULL)
 	{
-		in_ulen = icu_to_uchar(&trans_id, input_id, strlen(input_id));
+		in_ulen = string_to_uchar(&trans_id, input_id, strlen(input_id));
 
 		utrans = utrans_openU(trans_id,
 						  in_ulen,
@@ -123,7 +123,7 @@ icu_transform(PG_FUNCTION_ARGS)
 		}
 	}
 
-	ulen = icu_to_uchar(&utext, text_to_cstring(arg1), len1);
+	ulen = string_to_uchar(&utext, text_to_cstring(arg1), len1);
 	/* utext is terminated by a zero UChar that we include in the copy. */
 	original = (UChar*) palloc((ulen+1)*sizeof(UChar));
 	original_ulen = ulen;
@@ -173,6 +173,6 @@ icu_transform(PG_FUNCTION_ARGS)
 			done = true;
 	} while (!done);
 
-	result_len = icu_from_uchar(&result, utext, ulen);
+	result_len = string_from_uchar(&result, utext, ulen);
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result, result_len));
 }

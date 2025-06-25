@@ -37,7 +37,7 @@ icu_confusable_string_skeleton(PG_FUNCTION_ARGS)
 	sc = uspoof_open(&status);
 	if (!sc)
 		elog(ERROR, "ICU uspoof_open failed");
-	ulen1 = icu_to_uchar(&uchar1, text_to_cstring(txt1), len1);
+	ulen1 = string_to_uchar(&uchar1, text_to_cstring(txt1), len1);
 
 	// maximum of equal length sounds like a sane guess for the first try
 	ulen_skel = ulen1;
@@ -58,7 +58,7 @@ icu_confusable_string_skeleton(PG_FUNCTION_ARGS)
 	if (U_FAILURE(status))
 		elog(ERROR, "ICU uspoof_getSkeleton failed: %s", u_errorName(status));
 
-	result_len = icu_from_uchar(&result, uchar_skel, ulen_skel);
+	result_len = string_from_uchar(&result, uchar_skel, ulen_skel);
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result, result_len));
 }
 
@@ -80,7 +80,7 @@ icu_spoof_check(PG_FUNCTION_ARGS)
 	sc = uspoof_open(&status);
 	if (!sc)
 		elog(ERROR, "ICU uspoof_open failed");
-	ulen1 = icu_to_uchar(&uchar1, text_to_cstring(txt1), len1);
+	ulen1 = string_to_uchar(&uchar1, text_to_cstring(txt1), len1);
 	bitmask = uspoof_check(sc, uchar1, ulen1, NULL, &status);
 	uspoof_close(sc);
 
@@ -110,8 +110,8 @@ icu_confusable_strings_check(PG_FUNCTION_ARGS)
 	sc = uspoof_open(&status);
 	if (!sc)
 		elog(ERROR, "ICU uspoof_open failed");
-	ulen1 = icu_to_uchar(&uchar1, text_to_cstring(txt1), len1);
-	ulen2 = icu_to_uchar(&uchar2, text_to_cstring(txt2), len2);
+	ulen1 = string_to_uchar(&uchar1, text_to_cstring(txt1), len1);
+	ulen2 = string_to_uchar(&uchar2, text_to_cstring(txt2), len2);
 	bitmask = uspoof_areConfusable(sc, uchar1, ulen1, uchar2, ulen2, &status);
 	uspoof_close(sc);
 

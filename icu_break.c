@@ -103,7 +103,7 @@ init_srf_first_call(UBreakIteratorType break_type, PG_FUNCTION_ARGS)
 	{
 		text *input = PG_GETARG_TEXT_PP(0);
 		/* database encoding to UChar buffer */
-		ctxt->len = icu_to_uchar(&ctxt->cnv_text,
+		ctxt->len = string_to_uchar(&ctxt->cnv_text,
 								 text_to_cstring(input),
 								 VARSIZE_ANY_EXHDR(input));
 
@@ -172,7 +172,7 @@ icu_character_boundaries(PG_FUNCTION_ARGS)
 		{
 			char *buf;
 			/* convert UChar to a buffer in the database encoding */
-			int32_t len = icu_from_uchar(&buf, ctxt->cnv_text+pos0, pos-pos0);
+			int32_t len = string_from_uchar(&buf, ctxt->cnv_text+pos0, pos-pos0);
 			item = cstring_to_text_with_len(buf, len);
 		}
 		SRF_RETURN_NEXT(funcctx, PointerGetDatum(item));
@@ -227,7 +227,7 @@ icu_boundaries_internal(UBreakIteratorType break_type, PG_FUNCTION_ARGS)
 			{
 				char *buf;
 				/* convert back UChar to a buffer in the database encoding */
-				int32_t len = icu_from_uchar(&buf, ctxt->cnv_text + pos0, pos1-pos0);
+				int32_t len = string_from_uchar(&buf, ctxt->cnv_text + pos0, pos1-pos0);
 				item = cstring_to_text_with_len(buf, len);
 			}
 

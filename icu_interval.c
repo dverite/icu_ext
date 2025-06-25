@@ -52,7 +52,7 @@ add_interval(TimestampTz ts, const icu_interval_t *ival, const char *locale)
 	int32_t tzid_length;
 	const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 
-	tzid_length = icu_to_uchar(&tzid,
+	tzid_length = string_to_uchar(&tzid,
 							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
 							   strlen(pg_tz_name));
 

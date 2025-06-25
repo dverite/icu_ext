@@ -117,8 +117,8 @@ internal_strpos(text *txt1, text *txt2, UCollator *collator)
 	if (len2 == 0)
 	  return 1;
 
-	ulen1 = icu_to_uchar(&uchar1, VARDATA_ANY(txt1), len1);
-	ulen2 = icu_to_uchar(&uchar2, VARDATA_ANY(txt2), len2);
+	ulen1 = string_to_uchar(&uchar1, VARDATA_ANY(txt1), len1);
+	ulen2 = string_to_uchar(&uchar2, VARDATA_ANY(txt2), len2);
 
 	usearch = usearch_openFromCollator(uchar2, /* needle */
 									  ulen2,
@@ -228,8 +228,8 @@ internal_str_replace(text *txt1, /* not const because it may be returned */
 	if (len1 == 0 || len2 == 0)
 		return txt1;
 
-	ulen1 = icu_to_uchar(&uchar1, VARDATA_ANY(txt1), len1);
-	ulen2 = icu_to_uchar(&uchar2, VARDATA_ANY(txt2), len2);
+	ulen1 = string_to_uchar(&uchar1, VARDATA_ANY(txt1), len1);
+	ulen2 = string_to_uchar(&uchar2, VARDATA_ANY(txt2), len2);
 
 	usearch = usearch_openFromCollator(uchar2, /* needle */
 									  ulen2,

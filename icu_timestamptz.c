@@ -67,7 +67,7 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		{
 			if (icu_ext_timestamptz_format[0] != '\0' && icu_ext_timestamptz_style == UDAT_NONE)
 			{
-				pattern_length = icu_to_uchar(&output_pattern,
+				pattern_length = string_to_uchar(&output_pattern,
 											  icu_ext_timestamptz_format,
 											  strlen(icu_ext_timestamptz_format));
 			}
@@ -79,7 +79,7 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 		}
 
 		/* use PG current timezone, hopefully compatible with ICU */
-		tzid_length = icu_to_uchar(&tzid,
+		tzid_length = string_to_uchar(&tzid,
 								   pg_tz_name,
 								   strlen(pg_tz_name));
 
@@ -109,11 +109,11 @@ icu_timestamptz_out(PG_FUNCTION_ARGS)
 				status = U_ZERO_ERROR;
 				u_buffer = (UChar*) palloc(u_buffer_size*sizeof(UChar));
 				udat_format(df, udate, u_buffer, u_buffer_size, NULL, &status);
-				icu_from_uchar(&result, u_buffer, u_buffer_size);
+				string_from_uchar(&result, u_buffer, u_buffer_size);
 			}
 			else
 			{
-				icu_from_uchar(&result, local_buf, u_buffer_size);
+				string_from_uchar(&result, local_buf, u_buffer_size);
 			}
 		}
 		if (df)
@@ -152,13 +152,13 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 	{
 		if (icu_ext_timestamptz_format[0] != '\0' && style == UDAT_NONE)
 		{
-			pattern_length = icu_to_uchar(&input_pattern,
+			pattern_length = string_to_uchar(&input_pattern,
 										  icu_ext_timestamptz_format,
 										  strlen(icu_ext_timestamptz_format));
 		}
 	}
 
-	u_ts_length = icu_to_uchar(&u_ts_string, input_string, strlen(input_string));
+	u_ts_length = string_to_uchar(&u_ts_string, input_string, strlen(input_string));
 
 	if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
 	{
@@ -166,7 +166,7 @@ icu_timestamptz_in(PG_FUNCTION_ARGS)
 	}
 
 	/* use PG current timezone, hopefully compatible with ICU */
-	tzid_length = icu_to_uchar(&tzid,
+	tzid_length = string_to_uchar(&tzid,
 							   pg_tz_name,
 							   strlen(pg_tz_name));
 

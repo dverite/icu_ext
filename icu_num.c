@@ -58,7 +58,7 @@ icu_number_spellout(PG_FUNCTION_ARGS)
 		elog(ERROR, "unum_formatDouble failed: %s", u_errorName(status));
 	}
 
-	icu_from_uchar(&output, ubuf, real_len);
+	string_from_uchar(&output, ubuf, real_len);
 	unum_close(nf);
 
 	PG_RETURN_TEXT_P(cstring_to_text(output));

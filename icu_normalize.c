@@ -92,7 +92,7 @@ icu_normalize(PG_FUNCTION_ARGS)
 	if (GetDatabaseEncoding() != PG_UTF8)
 		elog(ERROR, "non-Unicode database encoding");
 
-	u_src_length = icu_to_uchar(&u_src,
+	u_src_length = string_to_uchar(&u_src,
 								VARDATA_ANY(src_text),
 								VARSIZE_ANY_EXHDR(src_text));
 
@@ -127,7 +127,7 @@ icu_normalize(PG_FUNCTION_ARGS)
 	if (U_FAILURE(status))
 		elog(ERROR, "unorm2_normalize failure: %s", u_errorName(status));
 
-	result_len = icu_from_uchar(&result, u_dest, effective_length);
+	result_len = string_from_uchar(&result, u_dest, effective_length);
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result, result_len));
 }
 
@@ -150,7 +150,7 @@ icu_is_normalized(PG_FUNCTION_ARGS)
 	if (GetDatabaseEncoding() != PG_UTF8)
 		elog(ERROR, "non-Unicode database encoding");
 
-	u_src_length = icu_to_uchar(&u_src,
+	u_src_length = string_to_uchar(&u_src,
 								VARDATA_ANY(src_text),
 								VARSIZE_ANY_EXHDR(src_text));
 

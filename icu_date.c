@@ -86,7 +86,7 @@ format_timestamp(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 	style = date_format_style(icu_date_format);
 	if (style == UDAT_NONE)
 	{
-		pattern_length = icu_to_uchar(&pattern_buf, icu_date_format, strlen(icu_date_format));
+		pattern_length = string_to_uchar(&pattern_buf, icu_date_format, strlen(icu_date_format));
 		style = UDAT_PATTERN;
 	}
 	else
@@ -95,7 +95,7 @@ format_timestamp(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 		pattern_buf = NULL;
 	}
 
-	tzid_length = icu_to_uchar(&tzid,
+	tzid_length = string_to_uchar(&tzid,
 							   pg_tz_name, /* or UCAL_UNKNOWN_ZONE_ID, like GMT */
 							   strlen(pg_tz_name));
 
@@ -129,11 +129,11 @@ format_timestamp(TimestampTz pg_tstz, text *date_fmt, const char *locale)
 			status = U_ZERO_ERROR;
 			u_buffer = (UChar*) palloc(u_buffer_size*sizeof(UChar));
 			udat_format(df, dat, u_buffer, u_buffer_size, NULL, &status);
-			result_len = icu_from_uchar(&result, u_buffer, u_buffer_size);
+			result_len = string_from_uchar(&result, u_buffer, u_buffer_size);
 		}
 		else
 		{
-			result_len = icu_from_uchar(&result, local_buf, u_buffer_size);
+			result_len = string_from_uchar(&result, local_buf, u_buffer_size);
 		}
 	}
 	if (df)
@@ -178,7 +178,7 @@ format_date(DateADT pg_date, text *date_fmt, const char *locale)
 	style = date_format_style(date_format);
 	if (style == UDAT_NONE)
 	{
-		pattern_length = icu_to_uchar(&pattern_buf, date_format, strlen(date_format));
+		pattern_length = string_to_uchar(&pattern_buf, date_format, strlen(date_format));
 		style = UDAT_PATTERN;
 	}
 	else
@@ -187,7 +187,7 @@ format_date(DateADT pg_date, text *date_fmt, const char *locale)
 		pattern_buf = NULL;
 	}
 
-	tzid_length = icu_to_uchar(&tzid, "GMT", 3);
+	tzid_length = string_to_uchar(&tzid, "GMT", 3);
 
 	if (!locale)
 		locale = icu_ext_default_locale;
@@ -219,11 +219,11 @@ format_date(DateADT pg_date, text *date_fmt, const char *locale)
 			status = U_ZERO_ERROR;
 			u_buffer = (UChar*) palloc(u_buffer_size*sizeof(UChar));
 			udat_format(df, dat, u_buffer, u_buffer_size, NULL, &status);
-			result_len = icu_from_uchar(&result, u_buffer, u_buffer_size);
+			result_len = string_from_uchar(&result, u_buffer, u_buffer_size);
 		}
 		else
 		{
-			result_len = icu_from_uchar(&result, local_buf, u_buffer_size);
+			result_len = string_from_uchar(&result, local_buf, u_buffer_size);
 		}
 	}
 	if (df)
@@ -294,7 +294,7 @@ parse_timestamp(const text *input_date,
 	style = date_format_style(date_format);
 	if (style == UDAT_NONE)
 	{
-		pattern_length = icu_to_uchar(&pattern_buf, date_format, strlen(date_format));
+		pattern_length = string_to_uchar(&pattern_buf, date_format, strlen(date_format));
 		style = UDAT_PATTERN;
 	}
 	else
@@ -304,11 +304,11 @@ parse_timestamp(const text *input_date,
 	}
 
 
-	u_date_length = icu_to_uchar(&u_date_string, date_string, strlen(date_string));
+	u_date_length = string_to_uchar(&u_date_string, date_string, strlen(date_string));
 
 	if (!include_time)
 	{
-		tzid_length = icu_to_uchar(&tzid,
+		tzid_length = string_to_uchar(&tzid,
 								   "GMT", /* for dates, we ignore timezones */
 								   3);
 	}
@@ -316,7 +316,7 @@ parse_timestamp(const text *input_date,
 	{
 		const char *pg_tz_name = pg_get_timezone_name(session_timezone);
 		/* use PG current timezone, hopefully compatible with ICU */
-		tzid_length = icu_to_uchar(&tzid,
+		tzid_length = string_to_uchar(&tzid,
 								   pg_tz_name,
 								   strlen(pg_tz_name));
 	}
@@ -427,20 +427,20 @@ icu_date_in(PG_FUNCTION_ARGS)
 	{
 		if (icu_ext_date_format[0] != '\0' && icu_ext_date_style == UDAT_NONE)
 		{
-			pattern_length = icu_to_uchar(&input_pattern,
+			pattern_length = string_to_uchar(&input_pattern,
 										  icu_ext_date_format,
 										  strlen(icu_ext_date_format));
 		}
 	}
 
-	u_date_length = icu_to_uchar(&u_date_string, date_string, strlen(date_string));
+	u_date_length = string_to_uchar(&u_date_string, date_string, strlen(date_string));
 
 	if (icu_ext_default_locale != NULL && icu_ext_default_locale[0] != '\0')
 	{
 		locale = icu_ext_default_locale;
 	}
 
-	tzid_length = icu_to_uchar(&tzid,
+	tzid_length = string_to_uchar(&tzid,
 							   "GMT", /* for dates, we ignore timezones */
 							   3);
 
@@ -516,7 +516,7 @@ icu_date_out(PG_FUNCTION_ARGS)
 		{
 			if (icu_ext_date_format[0] != '\0' && icu_ext_date_style == UDAT_NONE)
 			{
-				pattern_length = icu_to_uchar(&output_pattern,
+				pattern_length = string_to_uchar(&output_pattern,
 											  icu_ext_date_format,
 											  strlen(icu_ext_date_format));
 			}
@@ -528,7 +528,7 @@ icu_date_out(PG_FUNCTION_ARGS)
 		}
 
 		/* dates are not time-zone shifted when output */
-		tzid_length = icu_to_uchar(&tzid,
+		tzid_length = string_to_uchar(&tzid,
 								   UCAL_UNKNOWN_ZONE_ID, /*like GMT */
 								   strlen(UCAL_UNKNOWN_ZONE_ID));
 		/* if UDAT_PATTERN is passed, it must for both timeStyle and dateStyle */
@@ -557,11 +557,11 @@ icu_date_out(PG_FUNCTION_ARGS)
 				status = U_ZERO_ERROR;
 				u_buffer = (UChar*) palloc(u_buffer_size*sizeof(UChar));
 				udat_format(df, udate, u_buffer, u_buffer_size, NULL, &status);
-				icu_from_uchar(&result, u_buffer, u_buffer_size);
+				string_from_uchar(&result, u_buffer, u_buffer_size);
 			}
 			else
 			{
-				icu_from_uchar(&result, local_buf, u_buffer_size);
+				string_from_uchar(&result, local_buf, u_buffer_size);
 			}
 		}
 		if (df)

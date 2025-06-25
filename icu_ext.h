@@ -59,3 +59,6 @@ extern Datum icu_timestamptz_sub_interval(PG_FUNCTION_ARGS);
  */
 #define UDATE_TO_TS(ud) \
   (TimestampTz)((ud)*1000 - 10957LL*86400*1000*1000)
+
+int32_t string_to_uchar(UChar **buff_uchar, const char *buff, size_t nbytes);
+int32_t string_from_uchar(char **result, const UChar *buff_uchar, int32_t len_uchar);
