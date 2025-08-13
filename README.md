@@ -223,7 +223,7 @@ short, consider rebuilding the affected indexes on ICU upgrades.
 
 To simply compare pairs of strings, consider `icu_compare()` instead.
 
-Example demonstrating a case-sensitive, accent-sensitive unique index:
+Example demonstrating a case-insensitive, accent-insensitive unique index:
 
     =# CREATE TABLE uniq(name text);
 
