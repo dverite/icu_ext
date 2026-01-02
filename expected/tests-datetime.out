@@ -13,26 +13,26 @@ select
 (1 row)
 
 set icu_ext.locale to 'en@calendar=ethiopic';
-set icu_ext.date_format to '{short}';
--- Use an explicit format for icu_timestamptz instead of {short},
--- since {short} had varied across ICU versions:
+-- Use explicit formats to minimize compat problems
+-- For instance, {short} had varied across ICU versions:
 -- before ICU v72, the separator between hour and AM/PM designator
 -- is an ASCII space, whereas since v72 it is NARROW NO-BREAK SPACE (U+202F)
---set icu_ext.timestamptz_format to '{short}';
-set icu_ext.timestamptz_format to 'M/d/y G, hh:mm a';
+-- In ICU v78, the era names for the ethiopic calendar also change
+set icu_ext.date_format to 'M/d/y';
+set icu_ext.timestamptz_format to 'M/d/y, hh:mm a';
 -- 13-month year with 5 days in the last month
 select '1/13/2016 ERA1'::icu_date + icu_interval '12 months' as d1,
   '1/13/2016 ERA1'::icu_date + icu_interval '13 months' as d2,
   '1/13/2016 ERA1'::icu_date + icu_interval '1 year' as d3;
-            d1            |            d2            |            d3            
---------------------------+--------------------------+--------------------------
- 13/5/2016 ERA1, 12:00 AM | 1/13/2017 ERA1, 12:00 AM | 1/13/2017 ERA1, 12:00 AM
+         d1          |         d2          |         d3          
+---------------------+---------------------+---------------------
+ 13/5/2016, 12:00 AM | 1/13/2017, 12:00 AM | 1/13/2017, 12:00 AM
 (1 row)
 
 select '13/5/2016 ERA1'::icu_date + 1;
-   ?column?    
----------------
- 1/1/2017 ERA1
+ ?column? 
+----------
+ 1/1/2017
 (1 row)
 
 set icu_ext.locale to 'en@calendar=gregorian';

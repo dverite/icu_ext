@@ -12,14 +12,15 @@ select
  '2023-03-25 00:00:00'::icu_timestamptz + '26.5 hours'::icu_interval AS "ext";
 
 set icu_ext.locale to 'en@calendar=ethiopic';
-set icu_ext.date_format to '{short}';
 
--- Use an explicit format for icu_timestamptz instead of {short},
--- since {short} had varied across ICU versions:
+
+-- Use explicit formats to minimize compat problems
+-- For instance, {short} had varied across ICU versions:
 -- before ICU v72, the separator between hour and AM/PM designator
 -- is an ASCII space, whereas since v72 it is NARROW NO-BREAK SPACE (U+202F)
---set icu_ext.timestamptz_format to '{short}';
-set icu_ext.timestamptz_format to 'M/d/y G, hh:mm a';
+-- In ICU v78, the era names for the ethiopic calendar also change
+set icu_ext.date_format to 'M/d/y';
+set icu_ext.timestamptz_format to 'M/d/y, hh:mm a';
 
 -- 13-month year with 5 days in the last month
 select '1/13/2016 ERA1'::icu_date + icu_interval '12 months' as d1,
