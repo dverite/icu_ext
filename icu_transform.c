@@ -13,6 +13,9 @@
 #include "utils/builtins.h"
 #include "utils/pg_locale.h"
 #include "utils/memutils.h"
+#if PG_VERSION_NUM >= 160000
+#include "varatt.h"
+#endif
 
 #include "unicode/uenum.h"
 #include "unicode/utrans.h"
