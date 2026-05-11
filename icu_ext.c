@@ -752,12 +752,8 @@ ucollator_from_coll_id(Oid collid)
 {
 	pg_locale_t pg_locale;
 
-	if (collid == DEFAULT_COLLATION_OID || !OidIsValid(collid))
+	if (!OidIsValid(collid))
 	{
-		/*
-		 * This will need to be changed when a db will be able to have
-		 * an ICU collation by default (not possible as of PG11).
-		 */
 		ereport(ERROR,
 				(errcode(ERRCODE_INDETERMINATE_COLLATION),
 				 errmsg("could not determine which ICU collation to use"),
