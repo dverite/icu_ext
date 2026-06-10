@@ -9,6 +9,7 @@
 
 #include "icu_ext.h"
 
+#include "access/htup_details.h"
 #include "catalog/pg_collation.h"
 #include "funcapi.h"
 #include "lib/stringinfo.h"
@@ -17,6 +18,7 @@
 #include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/pg_locale.h"
+#include "utils/syscache.h"
 #include "utils/tuplestore.h"
 
 #include "unicode/ucnv.h"
@@ -751,6 +753,8 @@ UCollator*
 ucollator_from_coll_id(Oid collid)
 {
 	pg_locale_t pg_locale;
+	bool	    is_icu = false;
+	UCollator   *ucoll = NULL;
 
 	if (!OidIsValid(collid))
 	{
@@ -762,13 +766,38 @@ ucollator_from_coll_id(Oid collid)
 
 	pg_locale = pg_newlocale_from_collation(collid);
 
-	if (!pg_locale || pg_locale->provider != 'i')
+#if PG_VERSION_NUM >= 190000
+	/* PG 19+: find the collation provider in the pg_collation entry */
+	{
+		HeapTuple	tp;
+		Form_pg_collation collform;
+		tp = SearchSysCache1(COLLOID, ObjectIdGetDatum(collid));
+		if (!HeapTupleIsValid(tp))
+			elog(ERROR, "cache lookup failed for collation %u", collid);
+		collform = (Form_pg_collation) GETSTRUCT(tp);
+		is_icu = (collform->collprovider == 'i');
+		if (is_icu)
+			ucoll = pg_locale->icu.ucol;
+		ReleaseSysCache(tp);
+	}
+#else
+	/* PG 18 or older: find the provider in pg_locale */
+	if (pg_locale)
+	{
+		is_icu = (pg_locale->provider == 'i');
+		if (is_icu)
+			ucoll = pg_locale->info.icu.ucol;
+	}
+#endif
+
+	if (!pg_locale || !is_icu)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_COLLATION_MISMATCH),
 				 errmsg("the collation provider of the input string must be ICU")));
 	}
-	return pg_locale->info.icu.ucol;
+
+	return ucoll;
 }
 
 /*
